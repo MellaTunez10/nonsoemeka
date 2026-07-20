@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
 @layer base {
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -11,7 +14,7 @@
   }
 
   html.light body {
-    background-color: #f1f5f9;
+    background-color: #f8fafc;
     color: #0f172a;
   }
 
@@ -86,5 +89,4 @@ html.light ::-webkit-scrollbar-track {
 
 html.light ::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.8);
-  border-radius: 4px;
 }

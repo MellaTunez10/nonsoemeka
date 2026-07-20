@@ -27,7 +27,7 @@ const ProtectedLayout: React.FC<{ requiredRole?: 'ADMIN' | 'STAFF' }> = ({ requi
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 dark:bg-slate-950 light:bg-slate-100 flex items-center justify-center text-slate-400">
+      <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center text-slate-600 dark:text-slate-400">
         Loading session...
       </div>
     );
@@ -42,7 +42,7 @@ const ProtectedLayout: React.FC<{ requiredRole?: 'ADMIN' | 'STAFF' }> = ({ requi
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 dark:bg-slate-950 light:bg-slate-100 text-slate-100 dark:text-slate-100 light:text-slate-900 flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
       <Navbar />
       <main className="flex-1">
         <Outlet />

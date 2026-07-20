@@ -6,9 +6,7 @@ import {
   Shield,
   Lock,
   Unlock,
-  Activity,
   X,
-  FileText,
 } from 'lucide-react';
 
 export const AdminStaffPage: React.FC = () => {
@@ -60,16 +58,16 @@ export const AdminStaffPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <Users className="w-7 h-7 text-emerald-400" />
+          <h1 className="text-2xl font-bold dark:text-slate-100 light:text-slate-900 flex items-center gap-2">
+            <Users className="w-7 h-7 text-emerald-500" />
             Staff Management & System Audit Logs
           </h1>
-          <p className="text-sm text-slate-400">User role administration and security audit trails</p>
+          <p className="text-sm dark:text-slate-400 light:text-slate-600">User role administration and security audit trails</p>
         </div>
 
         <button
           onClick={() => setShowAddStaffModal(true)}
-          className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-emerald-950/50 self-start sm:self-auto"
+          className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-lg self-start sm:self-auto"
         >
           <UserPlus className="w-4 h-4" />
           <span>Add New Account</span>
@@ -77,17 +75,17 @@ export const AdminStaffPage: React.FC = () => {
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm">
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm">
           {errorMsg}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-4">
+      <div className="flex items-center gap-2 border-b dark:border-slate-800 light:border-slate-200 pb-4">
         <button
           onClick={() => setActiveTab('staff')}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'staff' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
+            activeTab === 'staff' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' : 'dark:text-slate-400 light:text-slate-600'
           }`}
         >
           Staff Accounts ({staffData?.data.length || 0})
@@ -95,7 +93,7 @@ export const AdminStaffPage: React.FC = () => {
         <button
           onClick={() => setActiveTab('audit')}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'audit' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
+            activeTab === 'audit' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' : 'dark:text-slate-400 light:text-slate-600'
           }`}
         >
           Audit Log History
@@ -103,9 +101,9 @@ export const AdminStaffPage: React.FC = () => {
       </div>
 
       {activeTab === 'staff' ? (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-xs">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-hidden shadow-xl">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+            <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Username</th>
                 <th className="py-3.5 px-4">Email</th>
@@ -115,19 +113,19 @@ export const AdminStaffPage: React.FC = () => {
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y dark:divide-slate-800/60 light:divide-slate-200">
               {staffData?.data.map((user) => {
                 const isLocked = user.locked_until && new Date(user.locked_until) > new Date();
                 return (
-                  <tr key={user.id} className="hover:bg-slate-800/40">
-                    <td className="py-3.5 px-4 font-semibold text-slate-100">{user.username}</td>
-                    <td className="py-3.5 px-4 text-slate-300">{user.email}</td>
+                  <tr key={user.id} className="dark:hover:bg-slate-800/40 light:hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-semibold dark:text-slate-100 light:text-slate-900">{user.username}</td>
+                    <td className="py-3.5 px-4 dark:text-slate-300 light:text-slate-600">{user.email}</td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`px-2.5 py-0.5 rounded text-[10px] uppercase font-bold ${
                           user.role === 'ADMIN'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                            ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
+                            : 'bg-teal-500/20 text-teal-500 border border-teal-500/30'
                         }`}
                       >
                         {user.role}
@@ -136,7 +134,7 @@ export const AdminStaffPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
-                          user.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                          user.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
                         }`}
                       >
                         {user.is_active ? 'Active' : 'Deactivated'}
@@ -144,12 +142,12 @@ export const AdminStaffPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4">
                       {isLocked ? (
-                        <span className="text-rose-400 text-xs font-semibold flex items-center gap-1">
+                        <span className="text-rose-500 text-xs font-semibold flex items-center gap-1">
                           <Lock className="w-3.5 h-3.5" /> Locked
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-xs flex items-center gap-1">
-                          <Shield className="w-3.5 h-3.5 text-emerald-400" /> Normal
+                        <span className="dark:text-slate-500 light:text-slate-400 text-xs flex items-center gap-1">
+                          <Shield className="w-3.5 h-3.5 text-emerald-500" /> Normal
                         </span>
                       )}
                     </td>
@@ -157,7 +155,7 @@ export const AdminStaffPage: React.FC = () => {
                       {isLocked && (
                         <button
                           onClick={() => handleClearLockout(user.id)}
-                          className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg text-xs font-medium border border-amber-500/30 flex items-center gap-1 inline-flex"
+                          className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 rounded-lg text-xs font-medium border border-amber-500/30 flex items-center gap-1 inline-flex"
                         >
                           <Unlock className="w-3.5 h-3.5" /> Clear Lockout
                         </button>
@@ -166,8 +164,8 @@ export const AdminStaffPage: React.FC = () => {
                         onClick={() => handleToggleActive(user.id, user.is_active)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
                           user.is_active
-                            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20'
-                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20'
+                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20'
                         }`}
                       >
                         {user.is_active ? 'Deactivate' : 'Reactivate'}
@@ -180,9 +178,9 @@ export const AdminStaffPage: React.FC = () => {
           </table>
         </div>
       ) : (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-950 text-slate-400 uppercase text-xs">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-hidden shadow-xl">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+            <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Timestamp</th>
                 <th className="py-3.5 px-4">Actor</th>
@@ -191,16 +189,16 @@ export const AdminStaffPage: React.FC = () => {
                 <th className="py-3.5 px-4">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y dark:divide-slate-800/60 light:divide-slate-200">
               {auditLogsData?.data.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-800/40">
-                  <td className="py-3.5 px-4 font-mono text-xs text-slate-400">
+                <tr key={log.id} className="dark:hover:bg-slate-800/40 light:hover:bg-slate-50">
+                  <td className="py-3.5 px-4 font-mono text-xs dark:text-slate-400 light:text-slate-500">
                     {new Date(log.created_at).toLocaleString()}
                   </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-200">{log.actor_name}</td>
-                  <td className="py-3.5 px-4 font-mono text-xs text-emerald-400">{log.action}</td>
-                  <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">{log.target_table}</td>
-                  <td className="py-3.5 px-4 text-xs font-mono text-slate-400">
+                  <td className="py-3.5 px-4 font-semibold dark:text-slate-200 light:text-slate-800">{log.actor_name}</td>
+                  <td className="py-3.5 px-4 font-mono text-xs text-emerald-500">{log.action}</td>
+                  <td className="py-3.5 px-4 dark:text-slate-400 light:text-slate-500 font-mono text-xs">{log.target_table}</td>
+                  <td className="py-3.5 px-4 text-xs font-mono dark:text-slate-400 light:text-slate-500">
                     {log.metadata ? JSON.stringify(log.metadata) : '-'}
                   </td>
                 </tr>
@@ -213,50 +211,50 @@ export const AdminStaffPage: React.FC = () => {
       {/* Add Staff Modal */}
       {showAddStaffModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6">
+          <div className="dark:bg-slate-900 light:bg-white border dark:border-slate-700 light:border-slate-300 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg text-slate-100">Register Staff User</h3>
-              <button onClick={() => setShowAddStaffModal(false)} className="text-slate-400 hover:text-white">
+              <h3 className="font-bold text-lg dark:text-slate-100 light:text-slate-900">Register Staff User</h3>
+              <button onClick={() => setShowAddStaffModal(false)} className="dark:text-slate-400 light:text-slate-500 hover:text-slate-900">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleCreateStaff} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Username</label>
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-1">Username</label>
                 <input
                   type="text"
                   required
                   value={staffForm.username}
                   onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-2.5 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Email</label>
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={staffForm.email}
                   onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-2.5 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Password</label>
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={staffForm.password}
                   onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-2.5 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Role</label>
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-1">Role</label>
                 <select
                   value={staffForm.role}
                   onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value as 'ADMIN' | 'STAFF' })}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-2.5 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 >
                   <option value="STAFF">STAFF</option>
                   <option value="ADMIN">ADMIN</option>

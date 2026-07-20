@@ -46,34 +46,34 @@ export const AdminSettingsPage: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-          <SettingsIcon className="w-7 h-7 text-emerald-400" />
+        <h1 className="text-2xl font-bold dark:text-slate-100 light:text-slate-900 flex items-center gap-2">
+          <SettingsIcon className="w-7 h-7 text-emerald-500" />
           System Settings & Configuration
         </h1>
-        <p className="text-sm text-slate-400">Configure global POS behavior, expiry thresholds, and receipt layout</p>
+        <p className="text-sm dark:text-slate-400 light:text-slate-600">Configure global POS behavior, expiry thresholds, and receipt layout</p>
       </div>
 
       {savedSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-sm flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           <span>System settings updated successfully and logged to audit trail.</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm">
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm">
           {errorMsg}
         </div>
       )}
 
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+      <div className="dark:bg-slate-900/90 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 shadow-xl">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-400">Loading configuration settings...</div>
+          <div className="p-8 text-center dark:text-slate-400 light:text-slate-500">Loading configuration settings...</div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-2">
                   Pharmacy Business Name
                 </label>
                 <input
@@ -81,12 +81,12 @@ export const AdminSettingsPage: React.FC = () => {
                   required
                   value={form.pharmacy_name}
                   onChange={(e) => setForm({ ...form, pharmacy_name: e.target.value })}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-3 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-2">
                   Default Batch Markup (%)
                 </label>
                 <input
@@ -94,12 +94,12 @@ export const AdminSettingsPage: React.FC = () => {
                   required
                   value={form.default_markup_percentage}
                   onChange={(e) => setForm({ ...form, default_markup_percentage: e.target.value })}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-3 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-2">
                   Expiry Alert Threshold (Days)
                 </label>
                 <input
@@ -108,12 +108,12 @@ export const AdminSettingsPage: React.FC = () => {
                   min={1}
                   value={form.expiry_alert_days}
                   onChange={(e) => setForm({ ...form, expiry_alert_days: parseInt(e.target.value) })}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-3 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+                <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-2">
                   Low Stock Threshold (Units)
                 </label>
                 <input
@@ -122,13 +122,13 @@ export const AdminSettingsPage: React.FC = () => {
                   min={1}
                   value={form.low_stock_threshold}
                   onChange={(e) => setForm({ ...form, low_stock_threshold: parseInt(e.target.value) })}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                  className="w-full p-3 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase mb-2">
+              <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-2">
                 Receipt Footer Text
               </label>
               <textarea
@@ -136,7 +136,7 @@ export const AdminSettingsPage: React.FC = () => {
                 rows={3}
                 value={form.receipt_footer}
                 onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })}
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-sm"
+                className="w-full p-3 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
               />
             </div>
 

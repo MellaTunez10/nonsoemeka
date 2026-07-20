@@ -116,7 +116,6 @@ export const StaffPOSPage: React.FC = () => {
       });
 
       setReceipt(resReceipt);
-      // Reset cart and generate new idempotency key on success
       setCart([]);
       setIdempotencyKey(crypto.randomUUID());
     } catch (err: unknown) {
@@ -132,27 +131,27 @@ export const StaffPOSPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <ShoppingCart className="w-7 h-7 text-emerald-400" />
+          <h1 className="text-2xl font-bold dark:text-slate-100 light:text-slate-900 flex items-center gap-2">
+            <ShoppingCart className="w-7 h-7 text-emerald-500" />
             POS Checkout Terminal
           </h1>
-          <p className="text-sm text-slate-400">Atomic FEFO stock dispatching with receipt generation</p>
+          <p className="text-sm dark:text-slate-400 light:text-slate-600">Atomic FEFO stock dispatching with receipt generation</p>
         </div>
 
         <div className="text-right hidden sm:block">
-          <div className="text-xs text-slate-500 font-mono">
-            Session Key: <span className="text-slate-400">{idempotencyKey.slice(0, 13)}...</span>
+          <div className="text-xs dark:text-slate-500 light:text-slate-500 font-mono">
+            Session Key: <span className="dark:text-slate-400 light:text-slate-700">{idempotencyKey.slice(0, 13)}...</span>
           </div>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center justify-between animate-in fade-in duration-200">
+        <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm flex items-center justify-between animate-in fade-in duration-200">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
             <span>{errorMsg}</span>
           </div>
-          <button onClick={() => setErrorMsg(null)} className="text-xs text-rose-400 underline">
+          <button onClick={() => setErrorMsg(null)} className="text-xs text-rose-500 underline">
             Dismiss
           </button>
         </div>
@@ -171,22 +170,22 @@ export const StaffPOSPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search product name or scan SKU barcode..."
-              className="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700/80 rounded-2xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm shadow-inner"
+              className="w-full pl-11 pr-4 py-3 dark:bg-slate-900/90 light:bg-white border dark:border-slate-700/80 light:border-slate-300 rounded-2xl dark:text-slate-100 light:text-slate-900 dark:placeholder-slate-500 light:placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm shadow-inner"
             />
-            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500 text-xs">
+            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
               <Barcode className="w-4 h-4 mr-1" />
               Scanner Ready
             </div>
           </div>
 
           {/* Product Grid */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-4 min-h-[450px] max-h-[600px] overflow-y-auto">
+          <div className="dark:bg-slate-900/60 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-4 min-h-[450px] max-h-[600px] overflow-y-auto shadow-sm">
             {isProductsLoading ? (
-              <div className="flex items-center justify-center h-64 text-slate-400">
+              <div className="flex items-center justify-center h-64 dark:text-slate-400 light:text-slate-500">
                 Loading products...
               </div>
             ) : productsData?.data?.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+              <div className="flex flex-col items-center justify-center h-64 dark:text-slate-500 light:text-slate-400">
                 <Package className="w-12 h-12 mb-2 opacity-50" />
                 <p>No active products found matching search.</p>
               </div>
@@ -201,40 +200,40 @@ export const StaffPOSPage: React.FC = () => {
                       disabled={outOfStock}
                       className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between group ${
                         outOfStock
-                          ? 'bg-slate-950/40 border-slate-900 opacity-50 cursor-not-allowed'
-                          : 'bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-emerald-500/50 shadow-md'
+                          ? 'dark:bg-slate-950/40 light:bg-slate-100 dark:border-slate-900 light:border-slate-200 opacity-50 cursor-not-allowed'
+                          : 'dark:bg-slate-800/60 light:bg-slate-50 border-slate-700/60 light:border-slate-200 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-sm'
                       }`}
                     >
                       <div>
                         <div className="flex items-start justify-between">
-                          <h3 className="font-semibold text-slate-100 text-sm group-hover:text-emerald-400 transition-colors">
+                          <h3 className="font-semibold dark:text-slate-100 light:text-slate-900 text-sm group-hover:text-emerald-500 transition-colors">
                             {product.name}
                           </h3>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded dark:bg-slate-900 light:bg-slate-200 dark:text-slate-400 light:text-slate-700">
                             {product.sku}
                           </span>
                         </div>
                         {product.description && (
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-1">{product.description}</p>
+                          <p className="text-xs dark:text-slate-400 light:text-slate-500 mt-1 line-clamp-1">{product.description}</p>
                         )}
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-800/80 pt-3">
+                      <div className="mt-4 flex items-center justify-between border-t dark:border-slate-800/80 light:border-slate-200 pt-3">
                         <div className="text-xs">
-                          <span className="text-slate-400">Stock: </span>
+                          <span className="dark:text-slate-400 light:text-slate-500">Stock: </span>
                           <span
                             className={`font-semibold ${
                               outOfStock
-                                ? 'text-rose-400'
+                                ? 'text-rose-500'
                                 : (product.total_quantity || 0) < 10
-                                ? 'text-amber-400'
-                                : 'text-emerald-400'
+                                ? 'text-amber-500'
+                                : 'text-emerald-500'
                             }`}
                           >
                             {product.total_quantity || 0} units
                           </span>
                         </div>
-                        <div className="text-base font-bold text-slate-100">
+                        <div className="text-base font-bold dark:text-slate-100 light:text-slate-900">
                           {formatMoney(product.selling_price || '0')}
                         </div>
                       </div>
@@ -248,17 +247,17 @@ export const StaffPOSPage: React.FC = () => {
 
         {/* Right Column: Cart & Summary */}
         <div className="lg:col-span-5">
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between h-full min-h-[550px] shadow-2xl">
+          <div className="dark:bg-slate-900/90 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 flex flex-col justify-between h-full min-h-[550px] shadow-xl">
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center justify-between pb-4 border-b dark:border-slate-800 light:border-slate-200">
                 <div className="flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-emerald-400" />
-                  <h2 className="font-bold text-slate-100 text-lg">Current Cart</h2>
+                  <Layers className="w-5 h-5 text-emerald-500" />
+                  <h2 className="font-bold dark:text-slate-100 light:text-slate-900 text-lg">Current Cart</h2>
                 </div>
                 {cart.length > 0 && (
                   <button
                     onClick={clearCart}
-                    className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1"
+                    className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1 font-medium"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Clear
@@ -267,12 +266,12 @@ export const StaffPOSPage: React.FC = () => {
               </div>
 
               {/* Cart List */}
-              <div className="divide-y divide-slate-800/80 max-h-[350px] overflow-y-auto my-4 pr-1">
+              <div className="divide-y dark:divide-slate-800/80 light:divide-slate-100 max-h-[350px] overflow-y-auto my-4 pr-1">
                 {cart.length === 0 ? (
-                  <div className="text-center py-16 text-slate-500">
+                  <div className="text-center py-16 dark:text-slate-500 light:text-slate-400">
                     <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Cart is empty.</p>
-                    <p className="text-xs mt-1 text-slate-600">Scan barcode or click items to add.</p>
+                    <p className="text-xs mt-1 opacity-75">Scan barcode or click items to add.</p>
                   </div>
                 ) : (
                   cart.map((item) => {
@@ -280,33 +279,33 @@ export const StaffPOSPage: React.FC = () => {
                     return (
                       <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-slate-200 truncate">{item.product.name}</h4>
-                          <div className="text-xs text-slate-400 font-mono">
+                          <h4 className="text-sm font-medium dark:text-slate-200 light:text-slate-800 truncate">{item.product.name}</h4>
+                          <div className="text-xs dark:text-slate-400 light:text-slate-500 font-mono">
                             {formatMoney(item.product.selling_price || '0')} each
                           </div>
                         </div>
 
                         {/* Quantity Controls */}
-                        <div className="flex items-center gap-2 bg-slate-800 rounded-xl p-1 border border-slate-700">
+                        <div className="flex items-center gap-2 dark:bg-slate-800 light:bg-slate-100 rounded-xl p-1 border dark:border-slate-700 light:border-slate-300">
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                            className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 transition-colors"
+                            className="p-1 rounded-lg hover:bg-slate-700/50 light:hover:bg-slate-200 dark:text-slate-300 light:text-slate-700 transition-colors"
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="text-xs font-semibold w-6 text-center text-slate-100">
+                          <span className="text-xs font-semibold w-6 text-center dark:text-slate-100 light:text-slate-900">
                             {item.quantity}
                           </span>
                           <button
                             onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                            className="p-1 rounded-lg hover:bg-slate-700 text-slate-300 transition-colors"
+                            className="p-1 rounded-lg hover:bg-slate-700/50 light:hover:bg-slate-200 dark:text-slate-300 light:text-slate-700 transition-colors"
                           >
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
 
                         <div className="text-right min-w-[70px]">
-                          <div className="text-sm font-bold text-slate-100">{lineTotal.formatCurrency()}</div>
+                          <div className="text-sm font-bold dark:text-slate-100 light:text-slate-900">{lineTotal.formatCurrency()}</div>
                         </div>
                       </div>
                     );
@@ -316,23 +315,23 @@ export const StaffPOSPage: React.FC = () => {
             </div>
 
             {/* Total & Checkout Button */}
-            <div className="border-t border-slate-800 pt-4 space-y-4">
-              <div className="flex justify-between items-center text-slate-300 text-sm">
+            <div className="border-t dark:border-slate-800 light:border-slate-200 pt-4 space-y-4">
+              <div className="flex justify-between items-center text-sm dark:text-slate-300 light:text-slate-600">
                 <span>Total Items:</span>
-                <span className="font-semibold text-slate-100">
+                <span className="font-semibold dark:text-slate-100 light:text-slate-900">
                   {cart.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center text-lg font-bold text-slate-100 pt-2 border-t border-dashed border-slate-800">
+              <div className="flex justify-between items-center text-lg font-bold dark:text-slate-100 light:text-slate-900 pt-2 border-t border-dashed dark:border-slate-800 light:border-slate-200">
                 <span>Grand Total:</span>
-                <span className="text-2xl text-emerald-400">{cartTotal.formatCurrency()}</span>
+                <span className="text-2xl text-emerald-500 font-extrabold">{cartTotal.formatCurrency()}</span>
               </div>
 
               <button
                 onClick={handleCheckout}
                 disabled={cart.length === 0 || checkoutMutation.isPending}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-50 text-white font-bold rounded-2xl shadow-xl shadow-emerald-950/60 flex items-center justify-center gap-2 text-base transition-all glow-emerald"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 disabled:opacity-50 text-white font-bold rounded-2xl shadow-xl flex items-center justify-center gap-2 text-base transition-all glow-emerald"
               >
                 <CheckCircle className="w-5 h-5" />
                 <span>{checkoutMutation.isPending ? 'Processing Checkout...' : 'Complete Sale & Print Receipt'}</span>

@@ -1,0 +1,68 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-ci:
+    name: Backend CI & Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nonsoemeka-backend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          check-latest: true
+
+      - name: Check Code Formatting (gofmt)
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Unformatted Go files found:"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: Run Go Vet
+        run: go vet ./...
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run Vulnerability Check
+        run: govulncheck ./...
+
+      - name: Start Test Database
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          until docker exec nonsoemeka_test_postgres pg_isready -U postgres -d nonsoemeka_test_db; do
+            echo "Waiting for test postgres..."
+            sleep 1
+          done
+
+      - name: Run Unit & Integration Tests (with race detector)
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5434
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: nonsoemeka_test_db
+          JWT_ACCESS_SECRET: test-access-secret-min-32-chars-key
+          JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars-key
+        run: go test -race -v ./...
+
+      - name: Build Go Application
+        run: go build -v ./...
+
+      - name: Stop Test Database
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

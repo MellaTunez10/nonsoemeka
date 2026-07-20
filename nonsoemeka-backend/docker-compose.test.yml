@@ -1,0 +1,15 @@
+services:
+  test_db:
+    image: postgres:15-alpine
+    container_name: nonsoemeka_test_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nonsoemeka_test_db
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nonsoemeka_test_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 10

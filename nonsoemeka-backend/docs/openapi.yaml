@@ -1,0 +1,480 @@
+openapi: 3.0.3
+info:
+  title: Nonsoemeka Pharmacy Backend API
+  description: Hybrid Point-of-Sale (POS) and inventory management API with FEFO stock dispatching and pharmaceutical batch tracking.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server
+
+paths:
+  /healthz:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service healthy
+  /readyz:
+    get:
+      summary: Readiness check endpoint
+      responses:
+        '200':
+          description: Service ready and database connected
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      responses:
+        '200':
+          description: Prometheus metrics formatted text
+
+  /api/v1/auth/login:
+    post:
+      summary: User login endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful. Access token returned in body, refresh token set as httpOnly cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh access token using httpOnly refresh token cookie
+      responses:
+        '200':
+          description: Access token refreshed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Logout user and revoke refresh token
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/v1/products:
+    get:
+      summary: List active products for staff (selling price only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductsResponse'
+
+  /api/v1/checkout:
+    post:
+      summary: Atomic FEFO checkout and receipt generation
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout completed successfully, receipt generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptResponse'
+        '409':
+          description: Insufficient stock or expired batch conflict
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/v1/admin/inventory/products:
+    post:
+      summary: Register a new product (Admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created successfully
+        '409':
+          description: Duplicate SKU error
+    get:
+      summary: List all products (Admin view)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductsResponse'
+
+  /api/v1/admin/inventory/batches:
+    post:
+      summary: Register a new batch (Admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterBatchRequest'
+      responses:
+        '201':
+          description: Batch registered, selling price generated by PostgreSQL
+        '409':
+          description: Duplicate batch number for product
+    get:
+      summary: List batches (Admin view)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBatchesResponse'
+
+  /api/v1/admin/inventory/batches/{id}/adjust:
+    post:
+      summary: Adjust batch stock level (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity_delta, reason]
+              properties:
+                quantity_delta:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Batch quantity adjusted, movement and audit log created
+
+  /api/v1/admin/inventory/batches/{id}/write-off:
+    post:
+      summary: Write off batch stock due to expiration or damage (Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Batch written off, movement and audit log created
+
+  /api/v1/admin/financials/summary:
+    get:
+      summary: Financial revenue, cost, and margin summary (Admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialSummaryResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            username:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
+
+    CreateProductRequest:
+      type: object
+      required: [name, sku]
+      properties:
+        name:
+          type: string
+        sku:
+          type: string
+        description:
+          type: string
+
+    RegisterBatchRequest:
+      type: object
+      required: [product_id, batch_number, quantity_received, expiry_date, cost_price]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        batch_number:
+          type: string
+        quantity_received:
+          type: integer
+        expiry_date:
+          type: string
+          format: date
+        cost_price:
+          type: string
+          example: "250.00"
+        markup_percentage:
+          type: string
+          example: "25.00"
+
+    CheckoutRequest:
+      type: object
+      required: [idempotency_key, items]
+      properties:
+        idempotency_key:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            required: [product_id, quantity]
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+
+    ReceiptResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        idempotency_key:
+          type: string
+        pharmacy_name:
+          type: string
+        footer_text:
+          type: string
+        staff_name:
+          type: string
+        total_amount:
+          type: string
+          example: "625.00"
+        issued_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              product_name:
+                type: string
+              batch_id:
+                type: string
+                format: uuid
+              batch_number:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: string
+                example: "312.50"
+              total_price:
+                type: string
+                example: "625.00"
+
+    FinancialSummaryResponse:
+      type: object
+      properties:
+        total_revenue:
+          type: string
+          example: "12500.00"
+        total_cost:
+          type: string
+          example: "10000.00"
+        total_gross_profit:
+          type: string
+          example: "2500.00"
+        profit_margin_percentage:
+          type: string
+          example: "20.00"
+        total_sales_count:
+          type: integer
+        total_items_sold:
+          type: integer
+
+    PaginatedProductsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              sku:
+                type: string
+              is_active:
+                type: boolean
+              total_quantity:
+                type: integer
+              selling_price:
+                type: string
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginatedBatchesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              batch_number:
+                type: string
+              quantity_remaining:
+                type: integer
+              expiry_date:
+                type: string
+              selling_price:
+                type: string
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+
+  responses:
+    ErrorResponse:
+      description: Standardized error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "INSUFFICIENT_STOCK"
+                  message:
+                    type: string
+                  request_id:
+                    type: string

@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
@@ -51,6 +53,10 @@ func NewCheckoutService(
 }
 
 func (s *checkoutService) ProcessCheckout(ctx context.Context, staffID uuid.UUID, req dto.CheckoutRequest) (dto.ReceiptResponse, error) {
+	if len(req.Items) == 0 {
+		return dto.ReceiptResponse{}, fmt.Errorf("cart is empty: %w", apperrors.ErrBadRequest)
+	}
+
 	// 1. Idempotency Check
 	existingSale, err := s.saleRepo.FindByIdempotencyKey(ctx, s.pool, req.IdempotencyKey)
 	if err != nil {
@@ -198,12 +204,21 @@ func (s *checkoutService) ProcessCheckout(ctx context.Context, staffID uuid.UUID
 
 	createdSale, err := s.saleRepo.Create(ctx, tx, sale, saleItemsToCreate)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrDuplicateIdempotencyKey) {
+			_ = tx.Rollback(ctx)
+			replayedSale, replayErr := s.saleRepo.FindByIdempotencyKey(ctx, s.pool, req.IdempotencyKey)
+			if replayErr != nil {
+				return dto.ReceiptResponse{}, fmt.Errorf("failed to fetch replayed sale: %w", replayErr)
+			}
+			if replayedSale != nil {
+				return s.formatReceipt(ctx, *replayedSale)
+			}
+		}
 		return dto.ReceiptResponse{}, fmt.Errorf("failed to create sale: %w", err)
 	}
 
 	// Record movements
 	for _, m := range movementsToCreate {
-		m.ReferenceID = &createdSale.ID
 		if err := s.movementRepo.Create(ctx, tx, m); err != nil {
 			return dto.ReceiptResponse{}, fmt.Errorf("failed to record movement: %w", err)
 		}
@@ -226,13 +241,17 @@ func (s *checkoutService) formatReceipt(ctx context.Context, sale models.Sale) (
 		if json.Unmarshal(nameSetting.Value, &nameStr) == nil && nameStr != "" {
 			pharmacyName = nameStr
 		}
+	} else if !errors.Is(err, apperrors.ErrNotFound) {
+		slog.ErrorContext(ctx, "failed to fetch pharmacy_name setting", "error", err)
 	}
 
-	if footerSetting, err := s.settingsRepo.Get(ctx, s.pool, "receipt_footer"); err == nil {
+	if footerSetting, err := s.settingsRepo.Get(ctx, s.pool, "receipt_footer_text"); err == nil {
 		var footerStr string
 		if json.Unmarshal(footerSetting.Value, &footerStr) == nil && footerStr != "" {
 			footerText = footerStr
 		}
+	} else if !errors.Is(err, apperrors.ErrNotFound) {
+		slog.ErrorContext(ctx, "failed to fetch receipt_footer_text setting", "error", err)
 	}
 
 	itemResponses := make([]dto.ReceiptItemResponse, 0, len(sale.Items))

@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shopspring/decimal"
 	"nonsoemeka-backend/internal/apperrors"
 	"nonsoemeka-backend/internal/dto"
@@ -39,6 +40,10 @@ func (r *postgresSaleRepository) Create(ctx context.Context, db DBTX, sale model
 		&createdSale.ID, &createdSale.StaffID, &createdSale.TotalAmount, &createdSale.IdempotencyKey, &createdSale.CreatedAt,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return models.Sale{}, apperrors.ErrDuplicateIdempotencyKey
+		}
 		return models.Sale{}, fmt.Errorf("failed to insert sale: %w", err)
 	}
 

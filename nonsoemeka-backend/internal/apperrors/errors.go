@@ -10,6 +10,7 @@ var (
 	ErrBatchExpired       = errors.New("batch expired")
 	ErrDuplicateSKU       = errors.New("duplicate sku")
 	ErrDuplicateBatch     = errors.New("duplicate batch")
+	ErrDuplicateIdempotencyKey = errors.New("duplicate idempotency key")
 	ErrUserLocked         = errors.New("user locked")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUnauthorized       = errors.New("unauthorized")

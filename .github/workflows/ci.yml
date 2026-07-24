@@ -132,4 +132,6 @@ jobs:
           DB_PASSWORD: ci-db-password
           JWT_ACCESS_SECRET: ci-access-secret-at-least-32-chars-long
           JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-chars-long
+          SEED_ADMIN_PASSWORD: ci-admin-password
+          SEED_STAFF_PASSWORD: ci-staff-password
           ALLOWED_ORIGINS: http://localhost

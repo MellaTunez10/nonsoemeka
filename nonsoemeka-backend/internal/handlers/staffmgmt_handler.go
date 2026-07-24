@@ -101,6 +101,29 @@ func (h *StaffManagementHandler) UpdateStaff(w http.ResponseWriter, r *http.Requ
 	h.writeJSON(w, http.StatusOK, res)
 }
 
+func (h *StaffManagementHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) {
+	claims, ok := middleware.GetUserClaims(r.Context())
+	if !ok {
+		h.writeError(w, r, apperrors.ErrUnauthorized)
+		return
+	}
+
+	staffIDStr := chi.URLParam(r, "id")
+	staffID, err := uuid.Parse(staffIDStr)
+	if err != nil {
+		h.writeError(w, r, apperrors.ErrBadRequest)
+		return
+	}
+
+	err = h.staffService.DeleteStaff(r.Context(), claims.UserID, staffID)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, map[string]string{"message": "Account successfully deleted"})
+}
+
 func (h *StaffManagementHandler) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	page, pageSize, err := parsePagination(r)
 	if err != nil {

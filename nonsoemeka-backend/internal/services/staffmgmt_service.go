@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"nonsoemeka-backend/internal/apperrors"
 	"nonsoemeka-backend/internal/audit"
 	"nonsoemeka-backend/internal/auth"
 	"nonsoemeka-backend/internal/dto"
@@ -17,6 +18,7 @@ type StaffManagementService interface {
 	CreateStaff(ctx context.Context, actorID uuid.UUID, req dto.CreateStaffRequest) (dto.StaffResponse, error)
 	ListStaff(ctx context.Context, page, pageSize int) (dto.PaginatedResponse[dto.StaffResponse], error)
 	UpdateStaff(ctx context.Context, actorID uuid.UUID, staffID uuid.UUID, req dto.UpdateStaffRequest) (dto.StaffResponse, error)
+	DeleteStaff(ctx context.Context, actorID uuid.UUID, staffID uuid.UUID) error
 	ListAuditLogs(ctx context.Context, actorID *uuid.UUID, action, targetTable *string, startDate, endDate *string, page, pageSize int) (dto.PaginatedResponse[dto.AuditLogResponse], error)
 }
 
@@ -221,4 +223,43 @@ func (s *staffManagementService) ListAuditLogs(ctx context.Context, actorID *uui
 			TotalPages: totalPages,
 		},
 	}, nil
+}
+
+func (s *staffManagementService) DeleteStaff(ctx context.Context, actorID uuid.UUID, staffID uuid.UUID) error {
+	if actorID == staffID {
+		return fmt.Errorf("cannot delete your own account: %w", apperrors.ErrBadRequest)
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	user, err := s.userRepo.FindByID(ctx, tx, staffID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.RevokeAllUserRefreshTokens(ctx, tx, staffID); err != nil {
+		return err
+	}
+
+	if err := s.userRepo.Delete(ctx, tx, staffID); err != nil {
+		return err
+	}
+
+	if err := audit.LogAction(ctx, s.auditRepo, tx, actorID, "USER_DELETED", "users", &staffID, map[string]interface{}{
+		"username": user.Username,
+		"email":    user.Email,
+		"role":     string(user.Role),
+	}); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

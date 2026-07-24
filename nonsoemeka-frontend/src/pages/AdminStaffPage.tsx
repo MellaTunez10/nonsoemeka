@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useStaffList, useCreateStaff, useUpdateStaff, useAuditLogs } from '../hooks/usePharmacy';
+import { useStaffList, useCreateStaff, useUpdateStaff, useDeleteStaff, useAuditLogs } from '../hooks/usePharmacy';
 import {
   Users,
   UserPlus,
@@ -7,6 +7,7 @@ import {
   Lock,
   Unlock,
   X,
+  Trash2,
 } from 'lucide-react';
 
 export const AdminStaffPage: React.FC = () => {
@@ -25,6 +26,7 @@ export const AdminStaffPage: React.FC = () => {
 
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
+  const deleteStaff = useDeleteStaff();
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +53,16 @@ export const AdminStaffPage: React.FC = () => {
       await updateStaff.mutateAsync({ id, req: { clear_lockout: true } });
     } catch (err: unknown) {
       if (err instanceof Error) alert(err.message);
+    }
+  };
+
+  const handleDelete = async (id: string, username: string) => {
+    if (window.confirm(`Are you sure you want to permanently delete the account for "${username}"? This action cannot be undone.`)) {
+      try {
+        await deleteStaff.mutateAsync(id);
+      } catch (err: unknown) {
+        if (err instanceof Error) alert(err.message);
+      }
     }
   };
 
@@ -101,8 +113,8 @@ export const AdminStaffPage: React.FC = () => {
       </div>
 
       {activeTab === 'staff' ? (
-        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-hidden shadow-xl">
-          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-x-auto shadow-xl">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700 min-w-[700px]">
             <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Username</th>
@@ -170,6 +182,12 @@ export const AdminStaffPage: React.FC = () => {
                       >
                         {user.is_active ? 'Deactivate' : 'Reactivate'}
                       </button>
+                      <button
+                        onClick={() => handleDelete(user.id, user.username)}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium flex items-center gap-1 inline-flex transition-all shadow"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
                     </td>
                   </tr>
                 );
@@ -178,8 +196,8 @@ export const AdminStaffPage: React.FC = () => {
           </table>
         </div>
       ) : (
-        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-hidden shadow-xl">
-          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-x-auto shadow-xl">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700 min-w-[700px]">
             <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Timestamp</th>

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -71,6 +72,29 @@ func (h *InventoryHandler) ListProducts(w http.ResponseWriter, r *http.Request) 
 	}
 
 	h.writeJSON(w, http.StatusOK, res)
+}
+
+func (h *InventoryHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	_, ok := middleware.GetUserClaims(r.Context())
+	if !ok {
+		h.writeError(w, r, apperrors.ErrUnauthorized)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeError(w, r, apperrors.ErrBadRequest)
+		return
+	}
+
+	err = h.inventoryService.DeleteProduct(r.Context(), id)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *InventoryHandler) RegisterBatch(w http.ResponseWriter, r *http.Request) {
@@ -301,6 +325,7 @@ func (h *InventoryHandler) writeError(w http.ResponseWriter, r *http.Request, er
 
 	msg := err.Error()
 	if status == http.StatusInternalServerError {
+		slog.Error("internal error in handler", "error", err, "request_id", reqID)
 		msg = "An unexpected error occurred"
 	}
 

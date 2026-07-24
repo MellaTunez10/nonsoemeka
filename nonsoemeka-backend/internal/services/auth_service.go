@@ -62,7 +62,7 @@ func (s *authService) Login(ctx context.Context, username, password string) (mod
 	}
 
 	accessToken, err := auth.GenerateAccessToken(
-		user.ID, user.Username, string(user.Role),
+		user.ID, user.Username, user.Email, string(user.Role),
 		s.cfg.JWT.AccessSecret, s.cfg.JWT.AccessTTL,
 	)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *authService) Refresh(ctx context.Context, rawRefreshToken string) (stri
 
 	// Issue new access & refresh tokens
 	accessToken, err := auth.GenerateAccessToken(
-		user.ID, user.Username, string(user.Role),
+		user.ID, user.Username, user.Email, string(user.Role),
 		s.cfg.JWT.AccessSecret, s.cfg.JWT.AccessTTL,
 	)
 	if err != nil {

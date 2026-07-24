@@ -25,7 +25,7 @@ export function useProducts(page = 1, search = '') {
   return useQuery({
     queryKey: ['products', page, search],
     queryFn: async () => {
-      const url = `/api/v1/products?page=${page}&page_size=20&search=${encodeURIComponent(search)}`;
+      const url = `/api/v1/products?page=${page}&page_size=20&search=${encodeURIComponent(search)}&active_only=true`;
       return apiClient<PaginatedResponse<Product>>(url);
     },
     staleTime: 5000, // 5s stale time for POS
@@ -37,7 +37,7 @@ export function useAdminProducts(page = 1, search = '') {
   return useQuery({
     queryKey: ['admin-products', page, search],
     queryFn: async () => {
-      const url = `/api/v1/admin/inventory/products?page=${page}&page_size=20&search=${encodeURIComponent(search)}`;
+      const url = `/api/v1/admin/inventory/products?page=${page}&page_size=20&search=${encodeURIComponent(search)}&active_only=true`;
       return apiClient<PaginatedResponse<Product>>(url);
     },
   });
@@ -89,6 +89,20 @@ export function useCreateProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient(`/api/v1/admin/inventory/products/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
   });
@@ -207,6 +221,20 @@ export function useUpdateStaff() {
       return apiClient<Staff>(`/api/v1/admin/staff/${id}`, {
         method: 'PUT',
         body: JSON.stringify(req),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-list'] });
+    },
+  });
+}
+
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient<{ message: string }>(`/api/v1/admin/staff/${id}`, {
+        method: 'DELETE',
       });
     },
     onSuccess: () => {

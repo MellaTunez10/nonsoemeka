@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"nonsoemeka-backend/internal/apperrors"
@@ -78,6 +79,7 @@ func (h *CheckoutHandler) writeError(w http.ResponseWriter, r *http.Request, err
 
 	msg := err.Error()
 	if status == http.StatusInternalServerError {
+		slog.Error("internal error in handler", "error", err, "request_id", reqID)
 		msg = "An unexpected error occurred"
 	}
 

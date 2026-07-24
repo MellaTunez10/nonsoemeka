@@ -43,7 +43,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ receipt, onClose }) 
             <p className="text-xs dark:text-slate-400 light:text-slate-600 mt-1">Official Sales Receipt</p>
             <div className="text-xs dark:text-slate-500 light:text-slate-500 mt-2 space-y-0.5 font-mono">
               <p>Receipt ID: {receipt.id.slice(0, 8)}</p>
-              <p>Date: {new Date(receipt.issued_at).toLocaleString()}</p>
+              <p>Date: {new Date(receipt.issued_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</p>
               <p>Staff: {receipt.staff_name}</p>
             </div>
           </div>

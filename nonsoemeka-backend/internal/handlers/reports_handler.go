@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"nonsoemeka-backend/internal/apperrors"
 	"nonsoemeka-backend/internal/middleware"
@@ -43,6 +44,16 @@ func (h *ReportsHandler) GetTopProducts(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		h.writeError(w, r, err)
 		return
+	}
+
+	// If limit is provided, override pageSize with it.
+	// Otherwise, default to 5 if no page_size is explicitly provided.
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+			pageSize = limit
+		}
+	} else if r.URL.Query().Get("page_size") == "" {
+		pageSize = 5
 	}
 
 	startDate := r.URL.Query().Get("start_date")

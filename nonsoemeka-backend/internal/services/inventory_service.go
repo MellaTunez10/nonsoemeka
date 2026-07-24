@@ -19,6 +19,7 @@ import (
 type InventoryService interface {
 	CreateProduct(ctx context.Context, actorID uuid.UUID, req dto.CreateProductRequest) (dto.ProductResponse, error)
 	ListProducts(ctx context.Context, search string, activeOnly bool, page, pageSize int) (dto.PaginatedResponse[dto.ProductResponse], error)
+	DeleteProduct(ctx context.Context, id uuid.UUID) error
 	GetProductByID(ctx context.Context, id uuid.UUID) (dto.ProductResponse, error)
 
 	RegisterBatch(ctx context.Context, actorID uuid.UUID, req dto.RegisterBatchRequest) (dto.BatchResponse, error)
@@ -303,6 +304,12 @@ func (s *inventoryService) AdjustStock(ctx context.Context, actorID uuid.UUID, b
 		return dto.BatchResponse{}, err
 	}
 
+	today := time.Now().Truncate(24 * time.Hour)
+	expiry := batch.ExpiryDate.Truncate(24 * time.Hour)
+	if !expiry.After(today) {
+		return dto.BatchResponse{}, fmt.Errorf("cannot adjust expired batch: %w", apperrors.ErrBadRequest)
+	}
+
 	newQty := batch.QuantityRemaining + req.QuantityDelta
 	if newQty < 0 || newQty > batch.QuantityReceived {
 		return dto.BatchResponse{}, fmt.Errorf("invalid quantity adjustment resulting in %d: %w", newQty, apperrors.ErrBadRequest)
@@ -515,4 +522,8 @@ func (s *inventoryService) ListMovements(ctx context.Context, batchID *uuid.UUID
 			TotalPages: totalPages,
 		},
 	}, nil
+}
+
+func (s *inventoryService) DeleteProduct(ctx context.Context, id uuid.UUID) error {
+	return s.productRepo.SoftDelete(ctx, s.pool, id)
 }

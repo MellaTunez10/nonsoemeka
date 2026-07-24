@@ -1,5 +1,10 @@
 import { ApiErrorResponse } from '../types';
 
+// Supports same-origin nginx deployments (default) and cross-domain deployments
+// (e.g. Vercel frontend + fly.io backend) via the VITE_API_BASE_URL build-time variable.
+// Leave unset (or empty) when using the nginx reverse-proxy at the same origin.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+
 let inMemoryAccessToken: string | null = null;
 let onLogoutCallback: (() => void) | null = null;
 let onTokenRefreshedCallback: ((newToken: string) => void) | null = null;
@@ -56,7 +61,7 @@ export async function apiClient<T>(
   };
 
   try {
-    const response = await fetch(endpoint, fetchOptions);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
     if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
       if (isRetry) {
@@ -77,7 +82,7 @@ export async function apiClient<T>(
       isRefreshing = true;
 
       try {
-        const refreshRes = await fetch('/api/v1/auth/refresh', {
+        const refreshRes = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

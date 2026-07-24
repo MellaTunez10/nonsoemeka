@@ -14,6 +14,7 @@ import (
 type Claims struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Username string    `json:"username"`
+	Email    string    `json:"email"`
 	Role     string    `json:"role"`
 	jwt.RegisteredClaims
 }
@@ -36,11 +37,12 @@ func HashRefreshToken(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func GenerateAccessToken(userID uuid.UUID, username, role, secret string, ttl time.Duration) (string, error) {
+func GenerateAccessToken(userID uuid.UUID, username, email, role, secret string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),

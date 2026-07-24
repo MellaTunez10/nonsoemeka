@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
       {/* Theme Toggle Button (Top Right) */}
       <button
         onClick={toggleTheme}
-        className={`absolute top-6 right-6 p-3 rounded-2xl border transition-all shadow-md flex items-center gap-2 text-sm font-medium z-20 ${
+        className={`absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 sm:p-3 rounded-2xl border transition-all shadow-md flex items-center gap-2 text-xs sm:text-sm font-medium z-20 ${
           isDark
             ? 'bg-slate-900/90 border-slate-700 text-amber-400 hover:bg-slate-800 hover:border-amber-400/50'
             : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-600'
@@ -74,20 +74,20 @@ export const LoginPage: React.FC = () => {
       >
         {isDark ? (
           <>
-            <Sun className="w-5 h-5 text-amber-400" />
-            <span className="text-slate-300">Light Mode</span>
+            <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+            <span className="text-slate-300 hidden xs:inline">Light Mode</span>
           </>
         ) : (
           <>
-            <Moon className="w-5 h-5 text-indigo-600" />
-            <span className="text-slate-700">Dark Mode</span>
+            <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+            <span className="text-slate-700 hidden xs:inline">Dark Mode</span>
           </>
         )}
       </button>
 
       {/* Main Glass Card */}
       <div
-        className={`w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl transition-all duration-300 border ${
+        className={`w-full max-w-md rounded-3xl p-6 sm:p-8 relative z-10 shadow-2xl transition-all duration-300 border ${
           isDark
             ? 'glass-card border-slate-800'
             : 'bg-white/80 backdrop-blur-xl border-slate-200/80 shadow-slate-300/50'
@@ -95,8 +95,8 @@ export const LoginPage: React.FC = () => {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-2xl shadow-xl shadow-emerald-900/40 mb-4 glow-emerald">
-            <Pill className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-emerald-900/40 mb-4 bg-white/10 glow-emerald border border-slate-200/20">
+            <img src="/logo.png" alt="Nonsoemeka Logo" className="w-full h-full object-cover" />
           </div>
           <h1
             className={`text-2xl font-bold tracking-tight ${

@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shopspring/decimal"
+	"nonsoemeka-backend/internal/audit"
 	"nonsoemeka-backend/internal/auth"
 	"nonsoemeka-backend/internal/config"
 	"nonsoemeka-backend/internal/database"
@@ -116,7 +119,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("READY"))
 	})
-	r.Handle("/metrics", promhttp.Handler())
+	r.Handle("/metrics", middleware.InternalOnlyMiddleware(promhttp.Handler()))
 
 	r.Route("/api/v1/auth", func(r chi.Router) {
 		r.With(middleware.RateLimitMiddleware(loginLimiter)).Post("/login", authHandler.Login)
@@ -142,6 +145,7 @@ func main() {
 			// Inventory Management
 			r.Post("/api/v1/admin/inventory/products", inventoryHandler.CreateProduct)
 			r.Get("/api/v1/admin/inventory/products", inventoryHandler.ListProducts)
+			r.Delete("/api/v1/admin/inventory/products/{id}", inventoryHandler.DeleteProduct)
 			r.Post("/api/v1/admin/inventory/batches", inventoryHandler.RegisterBatch)
 			r.Get("/api/v1/admin/inventory/batches", inventoryHandler.ListBatches)
 			r.Post("/api/v1/admin/inventory/batches/{id}/adjust", inventoryHandler.AdjustStock)
@@ -160,6 +164,7 @@ func main() {
 			r.Post("/api/v1/admin/staff", staffHandler.CreateStaff)
 			r.Get("/api/v1/admin/staff", staffHandler.ListStaff)
 			r.Put("/api/v1/admin/staff/{id}", staffHandler.UpdateStaff)
+			r.Delete("/api/v1/admin/staff/{id}", staffHandler.DeleteStaff)
 			r.Get("/api/v1/admin/audit-logs", staffHandler.ListAuditLogs)
 
 			// Settings
@@ -176,6 +181,12 @@ func main() {
 	}
 
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
+	// Run initial auto write-off check
+	runAutoWriteOff(serverCtx, pool, batchRepo, movementRepo, auditRepo)
+
+	// Start background expiration watcher
+	startExpirationWatcher(serverCtx, pool, batchRepo, movementRepo, auditRepo)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -354,4 +365,95 @@ func seedInitialData(
 	_ = staffUser
 	slog.Info("initial database seeding completed successfully")
 	return nil
+}
+
+func startExpirationWatcher(ctx context.Context, pool *pgxpool.Pool, batchRepo repository.BatchRepository, movementRepo repository.InventoryMovementRepository, auditRepo repository.AuditRepository) {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				runAutoWriteOff(ctx, pool, batchRepo, movementRepo, auditRepo)
+			}
+		}
+	}()
+}
+
+func runAutoWriteOff(ctx context.Context, pool *pgxpool.Pool, batchRepo repository.BatchRepository, movementRepo repository.InventoryMovementRepository, auditRepo repository.AuditRepository) {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		slog.Error("failed to start auto write-off transaction", "error", err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var adminID uuid.UUID
+	err = tx.QueryRow(ctx, "SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1").Scan(&adminID)
+	if err != nil {
+		return
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT id, quantity_remaining 
+		FROM batches 
+		WHERE expiry_date <= CURRENT_DATE AND quantity_remaining > 0
+		FOR UPDATE
+	`)
+	if err != nil {
+		slog.Error("failed to query expired batches for auto write-off", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	type expiredBatch struct {
+		id  uuid.UUID
+		qty int
+	}
+	var expired []expiredBatch
+	for rows.Next() {
+		var eb expiredBatch
+		if err := rows.Scan(&eb.id, &eb.qty); err == nil {
+			expired = append(expired, eb)
+		}
+	}
+	rows.Close()
+
+	reason := "Auto write-off of expired stock"
+	for _, eb := range expired {
+		_, err = tx.Exec(ctx, "UPDATE batches SET quantity_remaining = 0 WHERE id = $1", eb.id)
+		if err != nil {
+			slog.Error("failed to update expired batch quantity", "batch_id", eb.id, "error", err)
+			return
+		}
+
+		movement := models.InventoryMovement{
+			BatchID:       eb.id,
+			MovementType:  models.MovementExpiredWriteOff,
+			QuantityDelta: -eb.qty,
+			Reason:        &reason,
+			CreatedBy:     adminID,
+		}
+		if err := movementRepo.Create(ctx, tx, movement); err != nil {
+			slog.Error("failed to create inventory movement for auto write-off", "batch_id", eb.id, "error", err)
+			return
+		}
+
+		if err := audit.LogAction(ctx, auditRepo, tx, adminID, "STOCK_WRITTEN_OFF", "batches", &eb.id, map[string]interface{}{
+			"old_quantity":     eb.qty,
+			"new_quantity":     0,
+			"reason":           reason,
+			"system_initiated": true,
+		}); err != nil {
+			slog.Error("failed to create audit log for auto write-off", "batch_id", eb.id, "error", err)
+			return
+		}
+		slog.Info("automatically wrote off expired batch", "batch_id", eb.id, "quantity", eb.qty)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		slog.Error("failed to commit auto write-off transaction", "error", err)
+	}
 }

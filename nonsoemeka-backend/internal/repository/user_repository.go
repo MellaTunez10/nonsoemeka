@@ -32,6 +32,7 @@ type UserRepository interface {
 	FindRefreshToken(ctx context.Context, db DBTX, tokenHash string) (models.RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, db DBTX, tokenID uuid.UUID) error
 	RevokeAllUserRefreshTokens(ctx context.Context, db DBTX, userID uuid.UUID) error
+	Delete(ctx context.Context, db DBTX, id uuid.UUID) error
 }
 
 type postgresUserRepository struct{}
@@ -237,6 +238,18 @@ func (r *postgresUserRepository) RevokeAllUserRefreshTokens(ctx context.Context,
 	_, err := db.Exec(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke all refresh tokens: %w", err)
+	}
+	return nil
+}
+
+func (r *postgresUserRepository) Delete(ctx context.Context, db DBTX, id uuid.UUID) error {
+	query := `DELETE FROM users WHERE id = $1`
+	cmd, err := db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return apperrors.ErrNotFound
 	}
 	return nil
 }

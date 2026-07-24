@@ -27,11 +27,15 @@ export const AdminFinancialsPage: React.FC = () => {
   const { data: topProds } = useTopProducts(5);
   const { isDark } = useTheme();
 
-  const formattedTrendData = (trends?.data || []).map((t) => ({
-    date: t.date,
-    revenue: parseFloat(t.total_amount || '0'),
-    sales: t.sales_count,
-  }));
+  const formattedTrendData = [...(trends?.data || [])].reverse().map((t) => {
+    const d = new Date(t.date);
+    const dateLabel = isNaN(d.getTime()) ? t.date : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return {
+      date: dateLabel,
+      revenue: parseFloat(t.total_amount || '0'),
+      sales: t.sales_count,
+    };
+  });
 
   const formattedTopData = (topProds?.data || []).map((p) => ({
     name: p.product_name,

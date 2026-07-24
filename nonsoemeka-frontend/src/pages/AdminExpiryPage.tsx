@@ -56,7 +56,7 @@ export const AdminExpiryPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-hidden shadow-xl">
+      <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl overflow-x-auto shadow-xl">
         {isLoading ? (
           <div className="p-12 text-center dark:text-slate-400 light:text-slate-500">Loading expiry data...</div>
         ) : expiryData?.data.length === 0 ? (
@@ -66,7 +66,7 @@ export const AdminExpiryPage: React.FC = () => {
             <p className="text-xs dark:text-slate-500 light:text-slate-500">All inventory batches are within safe shelf-life parameters.</p>
           </div>
         ) : (
-          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700 min-w-[700px]">
             <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Alert Level</th>

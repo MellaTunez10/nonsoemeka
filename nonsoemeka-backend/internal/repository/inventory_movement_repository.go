@@ -43,11 +43,12 @@ func (r *postgresInventoryMovementRepository) ListByBatch(ctx context.Context, d
 	query := `
 		SELECT im.id, im.batch_id, b.batch_number, b.product_id, p.name as product_name,
 		       im.movement_type, im.quantity_delta, im.reference_id, im.reason,
-		       im.created_by, u.username as created_by_name, im.created_at
+		       COALESCE(im.created_by, '00000000-0000-0000-0000-000000000000'::uuid) as created_by,
+		       COALESCE(u.username, 'Deleted User') as created_by_name, im.created_at
 		FROM inventory_movements im
 		JOIN batches b ON im.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		JOIN users u ON im.created_by = u.id
+		LEFT JOIN users u ON im.created_by = u.id
 		WHERE im.batch_id = $1
 		ORDER BY im.created_at DESC
 		LIMIT $2 OFFSET $3
@@ -96,11 +97,12 @@ func (r *postgresInventoryMovementRepository) List(ctx context.Context, db DBTX,
 	query := fmt.Sprintf(`
 		SELECT im.id, im.batch_id, b.batch_number, b.product_id, p.name as product_name,
 		       im.movement_type, im.quantity_delta, im.reference_id, im.reason,
-		       im.created_by, u.username as created_by_name, im.created_at
+		       COALESCE(im.created_by, '00000000-0000-0000-0000-000000000000'::uuid) as created_by,
+		       COALESCE(u.username, 'Deleted User') as created_by_name, im.created_at
 		FROM inventory_movements im
 		JOIN batches b ON im.batch_id = b.id
 		JOIN products p ON b.product_id = p.id
-		JOIN users u ON im.created_by = u.id
+		LEFT JOIN users u ON im.created_by = u.id
 		%s
 		ORDER BY im.created_at DESC
 		LIMIT $%d OFFSET $%d

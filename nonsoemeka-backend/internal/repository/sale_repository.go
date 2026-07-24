@@ -67,9 +67,10 @@ func (r *postgresSaleRepository) Create(ctx context.Context, db DBTX, sale model
 
 func (r *postgresSaleRepository) FindByIdempotencyKey(ctx context.Context, db DBTX, key string) (*models.Sale, error) {
 	query := `
-		SELECT s.id, s.staff_id, u.username as staff_name, s.total_amount, s.idempotency_key, s.created_at
+		SELECT s.id, COALESCE(s.staff_id, '00000000-0000-0000-0000-000000000000'::uuid) as staff_id,
+		       COALESCE(u.username, 'Deleted User') as staff_name, s.total_amount, s.idempotency_key, s.created_at
 		FROM sales s
-		JOIN users u ON s.staff_id = u.id
+		LEFT JOIN users u ON s.staff_id = u.id
 		WHERE s.idempotency_key = $1
 	`
 	var sale models.Sale
@@ -114,9 +115,10 @@ func (r *postgresSaleRepository) FindByIdempotencyKey(ctx context.Context, db DB
 
 func (r *postgresSaleRepository) FindByID(ctx context.Context, db DBTX, id uuid.UUID) (*models.Sale, error) {
 	query := `
-		SELECT s.id, s.staff_id, u.username as staff_name, s.total_amount, s.idempotency_key, s.created_at
+		SELECT s.id, COALESCE(s.staff_id, '00000000-0000-0000-0000-000000000000'::uuid) as staff_id,
+		       COALESCE(u.username, 'Deleted User') as staff_name, s.total_amount, s.idempotency_key, s.created_at
 		FROM sales s
-		JOIN users u ON s.staff_id = u.id
+		LEFT JOIN users u ON s.staff_id = u.id
 		WHERE s.id = $1
 	`
 	var sale models.Sale
@@ -226,7 +228,7 @@ func (r *postgresSaleRepository) GetSalesTrends(ctx context.Context, db DBTX, st
 		FROM sales
 		%s
 		GROUP BY DATE(created_at)
-		ORDER BY DATE(created_at) DESC
+		ORDER BY DATE(created_at) ASC
 		LIMIT $%d OFFSET $%d
 	`, whereClause, argIdx, argIdx+1)
 

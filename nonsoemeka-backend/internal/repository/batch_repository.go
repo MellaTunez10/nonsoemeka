@@ -185,7 +185,7 @@ func (r *postgresBatchRepository) ListExpiring(ctx context.Context, db DBTX, day
 
 	countQuery := `
 		SELECT COUNT(*) FROM batches
-		WHERE quantity_remaining > 0 AND expiry_date <= (CURRENT_DATE + ($1 || ' days')::INTERVAL)
+		WHERE quantity_remaining > 0 AND expiry_date <= (CURRENT_DATE + make_interval(days => $1))
 	`
 	var total int
 	if err := db.QueryRow(ctx, countQuery, daysThreshold).Scan(&total); err != nil {
@@ -198,7 +198,7 @@ func (r *postgresBatchRepository) ListExpiring(ctx context.Context, db DBTX, day
 		       b.selling_price, b.received_at
 		FROM batches b
 		JOIN products p ON b.product_id = p.id
-		WHERE b.quantity_remaining > 0 AND b.expiry_date <= (CURRENT_DATE + ($1 || ' days')::INTERVAL)
+		WHERE b.quantity_remaining > 0 AND b.expiry_date <= (CURRENT_DATE + make_interval(days => $1))
 		ORDER BY b.expiry_date ASC
 		LIMIT $2 OFFSET $3
 	`

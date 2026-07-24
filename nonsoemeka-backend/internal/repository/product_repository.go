@@ -18,6 +18,7 @@ type ProductRepository interface {
 	FindByID(ctx context.Context, db DBTX, id uuid.UUID) (models.Product, error)
 	FindBySKU(ctx context.Context, db DBTX, sku string) (models.Product, error)
 	List(ctx context.Context, db DBTX, search string, activeOnly bool, page, pageSize int) ([]models.Product, int, error)
+	SoftDelete(ctx context.Context, db DBTX, id uuid.UUID) error
 }
 
 type postgresProductRepository struct{}
@@ -150,4 +151,16 @@ func (r *postgresProductRepository) List(ctx context.Context, db DBTX, search st
 	}
 
 	return products, total, nil
+}
+
+func (r *postgresProductRepository) SoftDelete(ctx context.Context, db DBTX, id uuid.UUID) error {
+	query := `UPDATE products SET is_active = false, updated_at = now() WHERE id = $1`
+	cmdTag, err := db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to soft delete product: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }

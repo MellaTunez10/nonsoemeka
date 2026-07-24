@@ -7,6 +7,7 @@ import {
   useAdjustStock,
   useWriteOffStock,
   useSettings,
+  useDeleteProduct,
 } from '../hooks/usePharmacy';
 import { formatMoney } from '../lib/money';
 import {
@@ -17,6 +18,7 @@ import {
   AlertOctagon,
   X,
   Search,
+  Trash2,
 } from 'lucide-react';
 
 export const AdminInventoryPage: React.FC = () => {
@@ -50,6 +52,17 @@ export const AdminInventoryPage: React.FC = () => {
   const registerBatch = useRegisterBatch();
   const adjustStock = useAdjustStock();
   const writeOffStock = useWriteOffStock();
+  const deleteProduct = useDeleteProduct();
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to deactivate ${name}?`)) {
+      try {
+        await deleteProduct.mutateAsync(id);
+      } catch (err: unknown) {
+        if (err instanceof Error) alert(err.message);
+      }
+    }
+  };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,9 +79,21 @@ export const AdminInventoryPage: React.FC = () => {
   const handleRegisterBatch = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+
+    // Convert DD/MM/YYYY to YYYY-MM-DD for backend
+    const datePattern = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = batchForm.expiry_date.match(datePattern);
+    if (!match) {
+      setErrorMsg("Expiry date must be in DD/MM/YYYY format");
+      return;
+    }
+    const [_, day, month, year] = match;
+    const formattedExpiryDate = `${year}-${month}-${day}`;
+
     try {
       await registerBatch.mutateAsync({
         ...batchForm,
+        expiry_date: formattedExpiryDate,
         markup_percentage: batchForm.markup_percentage || settingsData?.default_markup_percentage,
       });
       setShowAddBatch(false);
@@ -182,8 +207,8 @@ export const AdminInventoryPage: React.FC = () => {
 
       {/* Content Tables */}
       {activeTab === 'products' ? (
-        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-2xl overflow-hidden shadow-md">
-          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-2xl overflow-x-auto shadow-md">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700 min-w-[600px]">
             <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Product Name</th>
@@ -191,6 +216,7 @@ export const AdminInventoryPage: React.FC = () => {
                 <th className="py-3.5 px-4">Total Stock</th>
                 <th className="py-3.5 px-4">Selling Price</th>
                 <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-slate-800/60 light:divide-slate-200">
@@ -205,14 +231,23 @@ export const AdminInventoryPage: React.FC = () => {
                       Active
                     </span>
                   </td>
+                  <td className="py-3 px-4 text-right">
+                    <button 
+                      onClick={() => handleDeleteProduct(p.id, p.name)}
+                      className="p-1 text-rose-400 hover:bg-rose-500/10 rounded transition-colors"
+                      title="Delete Product"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-2xl overflow-hidden shadow-md">
-          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700">
+        <div className="dark:bg-slate-900/80 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-2xl overflow-x-auto shadow-md">
+          <table className="w-full text-left text-sm dark:text-slate-300 light:text-slate-700 min-w-[700px]">
             <thead className="dark:bg-slate-950 light:bg-slate-100 dark:text-slate-400 light:text-slate-600 uppercase text-xs">
               <tr>
                 <th className="py-3.5 px-4">Batch #</th>
@@ -225,9 +260,14 @@ export const AdminInventoryPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-slate-800/60 light:divide-slate-200">
-              {batchesData?.data.map((b) => (
-                <tr key={b.id} className="dark:hover:bg-slate-800/40 light:hover:bg-slate-50">
-                  <td className="py-3 px-4 font-mono dark:text-slate-100 light:text-slate-900 font-semibold">{b.batch_number}</td>
+              {batchesData?.data.map((b) => {
+                const isExpired = new Date(b.expiry_date) <= new Date();
+                return (
+                <tr key={b.id} className={`dark:hover:bg-slate-800/40 light:hover:bg-slate-50 transition-colors ${isExpired ? 'opacity-50 grayscale' : ''}`}>
+                  <td className="py-3 px-4 font-mono dark:text-slate-100 light:text-slate-900 font-semibold">
+                    {b.batch_number}
+                    {isExpired && <span className="ml-2 text-[10px] text-rose-500 uppercase">Expired</span>}
+                  </td>
                   <td className="py-3 px-4 dark:text-slate-200 light:text-slate-800">{b.product_name || 'N/A'}</td>
                   <td className="py-3 px-4 font-medium text-emerald-500">{b.quantity_remaining} units</td>
                   <td className="py-3 px-4 dark:text-slate-300 light:text-slate-600 font-mono text-xs">{b.expiry_date}</td>
@@ -256,7 +296,8 @@ export const AdminInventoryPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
@@ -363,10 +404,20 @@ export const AdminInventoryPage: React.FC = () => {
                 <div>
                   <label className="block text-xs font-semibold dark:text-slate-300 light:text-slate-700 uppercase mb-1">Expiry Date</label>
                   <input
-                    type="date"
+                    type="text"
                     required
+                    placeholder="DD/MM/YYYY"
+                    pattern="\d{2}/\d{2}/\d{4}"
                     value={batchForm.expiry_date}
-                    onChange={(e) => setBatchForm({ ...batchForm, expiry_date: e.target.value })}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/\D/g, '');
+                      if (val.length > 2 && val.length <= 4) {
+                        val = val.slice(0, 2) + '/' + val.slice(2);
+                      } else if (val.length > 4) {
+                        val = val.slice(0, 2) + '/' + val.slice(2, 4) + '/' + val.slice(4, 8);
+                      }
+                      setBatchForm({ ...batchForm, expiry_date: val });
+                    }}
                     className="w-full p-2.5 dark:bg-slate-950 light:bg-slate-50 border dark:border-slate-800 light:border-slate-300 rounded-xl dark:text-slate-100 light:text-slate-900 text-sm"
                   />
                 </div>

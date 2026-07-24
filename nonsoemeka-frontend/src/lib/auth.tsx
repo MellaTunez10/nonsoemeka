@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
               id: payload.user_id,
               username: payload.username,
-              email: payload.email || `${payload.username}@pharmacy.com`,
+              email: payload.email ?? '',
               role: payload.role as UserRole,
             });
           }

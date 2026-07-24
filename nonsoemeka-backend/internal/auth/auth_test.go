@@ -24,7 +24,7 @@ func TestAuth_JWTTokens(t *testing.T) {
 	userID := uuid.New()
 	secret := "test-secret-key-min-32-chars-long"
 
-	tokenStr, err := auth.GenerateAccessToken(userID, "admin_user", "ADMIN", secret, 15*time.Minute)
+	tokenStr, err := auth.GenerateAccessToken(userID, "admin_user", "admin@pharmacy.local", "ADMIN", secret, 15*time.Minute)
 	require.NoError(t, err)
 	assert.NotEmpty(t, tokenStr)
 
@@ -32,6 +32,7 @@ func TestAuth_JWTTokens(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, userID, claims.UserID)
 	assert.Equal(t, "admin_user", claims.Username)
+	assert.Equal(t, "admin@pharmacy.local", claims.Email)
 	assert.Equal(t, "ADMIN", claims.Role)
 }
 

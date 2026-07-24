@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -159,15 +160,33 @@ func TimeoutMiddleware(timeout time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-type RateLimiter struct {
+// RateLimiterBackend is the interface for rate-limiting backends.
+// The default implementation is in-memory (InMemoryRateLimiter).
+//
+// SCALING NOTE: The in-memory backend stores counters in process memory.
+// This means:
+//   - Counters reset on every restart / redeploy.
+//   - If you run 2+ API replicas, each has its own counters and
+//     effective limits are multiplied by the replica count.
+//
+// For multi-instance deployments, implement this interface with a
+// Redis-backed sliding window (e.g. using MULTI/EXEC with ZRANGEBYSCORE).
+type RateLimiterBackend interface {
+	// Allow returns true if the request identified by key is within limits.
+	Allow(key string) bool
+}
+
+// InMemoryRateLimiter is a sliding-window rate limiter backed by a plain
+// Go map. Suitable for single-instance deployments only.
+type InMemoryRateLimiter struct {
 	mu       sync.Mutex
 	requests map[string][]time.Time
 	limit    int
 	window   time.Duration
 }
 
-func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	rl := &RateLimiter{
+func NewRateLimiter(limit int, window time.Duration) RateLimiterBackend {
+	rl := &InMemoryRateLimiter{
 		requests: make(map[string][]time.Time),
 		limit:    limit,
 		window:   window,
@@ -176,7 +195,7 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	return rl
 }
 
-func (rl *RateLimiter) Allow(key string) bool {
+func (rl *InMemoryRateLimiter) Allow(key string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -200,7 +219,7 @@ func (rl *RateLimiter) Allow(key string) bool {
 	return true
 }
 
-func (rl *RateLimiter) cleanupLoop() {
+func (rl *InMemoryRateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	for range ticker.C {
 		rl.mu.Lock()
@@ -223,7 +242,7 @@ func (rl *RateLimiter) cleanupLoop() {
 	}
 }
 
-func RateLimitMiddleware(limiter *RateLimiter) func(http.Handler) http.Handler {
+func RateLimitMiddleware(limiter RateLimiterBackend) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clientIP := r.RemoteAddr
@@ -306,5 +325,63 @@ func writeError(w http.ResponseWriter, r *http.Request, status int, code, messag
 			Message:   message,
 			RequestID: reqID,
 		},
+	})
+}
+
+// Docker default bridge and overlay networks
+var dockerCIDRs = []string{
+	"172.16.0.0/12",
+	"10.0.0.0/8",
+	"192.168.0.0/16",
+}
+
+// InternalOnlyMiddleware restricts access to requests originating from
+// localhost (127.0.0.1 / ::1) or Docker-internal networks.
+// Use this to protect endpoints like /metrics from public access.
+func InternalOnlyMiddleware(next http.Handler) http.Handler {
+	// Pre-parse the CIDR blocks once at init time.
+	var internalNets []*net.IPNet
+	for _, cidr := range dockerCIDRs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err == nil {
+			internalNets = append(internalNets, network)
+		}
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		remoteIP := r.RemoteAddr
+
+		// X-Forwarded-For takes precedence when behind a proxy
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			remoteIP = strings.TrimSpace(strings.Split(xff, ",")[0])
+		}
+
+		// Strip port if present (e.g. "172.18.0.3:54321" → "172.18.0.3")
+		host, _, err := net.SplitHostPort(remoteIP)
+		if err == nil {
+			remoteIP = host
+		}
+
+		ip := net.ParseIP(remoteIP)
+		if ip == nil {
+			writeError(w, r, http.StatusForbidden, "FORBIDDEN", "access denied")
+			return
+		}
+
+		// Allow loopback
+		if ip.IsLoopback() {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Allow Docker-internal networks
+		for _, network := range internalNets {
+			if network.Contains(ip) {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		writeError(w, r, http.StatusForbidden, "FORBIDDEN", "access denied")
 	})
 }

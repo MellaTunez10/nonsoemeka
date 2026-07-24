@@ -27,6 +27,7 @@ export const StaffPOSPage: React.FC = () => {
   const [idempotencyKey, setIdempotencyKey] = useState<string>(() => crypto.randomUUID());
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,6 +101,8 @@ export const StaffPOSPage: React.FC = () => {
     return acc.add(itemPrice.mul(item.quantity));
   }, Money.zero());
 
+  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setErrorMsg(null);
@@ -128,25 +131,54 @@ export const StaffPOSPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 light:text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="w-7 h-7 text-emerald-500" />
+          <h1 className="text-xl sm:text-2xl font-bold dark:text-slate-100 light:text-slate-900 flex items-center gap-2">
+            <ShoppingCart className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500" />
             POS Checkout Terminal
           </h1>
-          <p className="text-sm dark:text-slate-400 light:text-slate-600">Atomic FEFO stock dispatching with receipt generation</p>
+          <p className="text-xs sm:text-sm dark:text-slate-400 light:text-slate-600">Atomic FEFO stock dispatching with receipt generation</p>
         </div>
 
-        <div className="text-right hidden sm:block">
-          <div className="text-xs dark:text-slate-500 light:text-slate-500 font-mono">
+        <div className="text-left sm:text-right">
+          <div className="text-[11px] sm:text-xs dark:text-slate-500 light:text-slate-500 font-mono">
             Session Key: <span className="dark:text-slate-400 light:text-slate-700">{idempotencyKey.slice(0, 13)}...</span>
           </div>
         </div>
       </div>
 
+      {/* Mobile Tab Switcher */}
+      <div className="flex lg:hidden items-center gap-2 mb-4 p-1 dark:bg-slate-900 light:bg-slate-200 rounded-2xl border dark:border-slate-800 light:border-slate-300">
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'products'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'dark:text-slate-400 light:text-slate-700 hover:text-slate-900'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Products</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('cart')}
+          className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 relative ${
+            activeTab === 'cart'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'dark:text-slate-400 light:text-slate-700 hover:text-slate-900'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Cart ({totalCartCount})</span>
+          {totalCartCount > 0 && activeTab !== 'cart' && (
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping absolute top-2 right-4" />
+          )}
+        </button>
+      </div>
+
       {errorMsg && (
-        <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm flex items-center justify-between animate-in fade-in duration-200">
+        <div className="mb-4 sm:mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-sm flex items-center justify-between animate-in fade-in duration-200">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
             <span>{errorMsg}</span>
@@ -159,7 +191,7 @@ export const StaffPOSPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Product Search & Grid */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className={`lg:col-span-7 space-y-4 ${activeTab === 'cart' ? 'hidden lg:block' : 'block'}`}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
               <Search className="w-5 h-5" />
@@ -170,16 +202,16 @@ export const StaffPOSPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search product name or scan SKU barcode..."
-              className="w-full pl-11 pr-4 py-3 dark:bg-slate-900/90 light:bg-white border dark:border-slate-700/80 light:border-slate-300 rounded-2xl dark:text-slate-100 light:text-slate-900 dark:placeholder-slate-500 light:placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm shadow-inner"
+              className="w-full pl-11 pr-28 sm:pr-32 py-3 dark:bg-slate-900/90 light:bg-white border dark:border-slate-700/80 light:border-slate-300 rounded-2xl dark:text-slate-100 light:text-slate-900 dark:placeholder-slate-500 light:placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm shadow-inner"
             />
-            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400 text-xs">
-              <Barcode className="w-4 h-4 mr-1" />
-              Scanner Ready
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-[11px] sm:text-xs">
+              <Barcode className="w-4 h-4 mr-1 text-emerald-500" />
+              <span className="hidden xs:inline">Scanner Ready</span>
             </div>
           </div>
 
           {/* Product Grid */}
-          <div className="dark:bg-slate-900/60 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-4 min-h-[450px] max-h-[600px] overflow-y-auto shadow-sm">
+          <div className="dark:bg-slate-900/60 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-4 min-h-[400px] sm:min-h-[450px] max-h-[600px] overflow-y-auto shadow-sm">
             {isProductsLoading ? (
               <div className="flex items-center justify-center h-64 dark:text-slate-400 light:text-slate-500">
                 Loading products...
@@ -205,11 +237,11 @@ export const StaffPOSPage: React.FC = () => {
                       }`}
                     >
                       <div>
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <h3 className="font-semibold dark:text-slate-100 light:text-slate-900 text-sm group-hover:text-emerald-500 transition-colors">
                             {product.name}
                           </h3>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded dark:bg-slate-900 light:bg-slate-200 dark:text-slate-400 light:text-slate-700">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded dark:bg-slate-900 light:bg-slate-200 dark:text-slate-400 light:text-slate-700 shrink-0">
                             {product.sku}
                           </span>
                         </div>
@@ -246,8 +278,8 @@ export const StaffPOSPage: React.FC = () => {
         </div>
 
         {/* Right Column: Cart & Summary */}
-        <div className="lg:col-span-5">
-          <div className="dark:bg-slate-900/90 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-6 flex flex-col justify-between h-full min-h-[550px] shadow-xl">
+        <div className={`lg:col-span-5 ${activeTab === 'products' ? 'hidden lg:block' : 'block'}`}>
+          <div className="dark:bg-slate-900/90 light:bg-white border dark:border-slate-800 light:border-slate-200 rounded-3xl p-5 sm:p-6 flex flex-col justify-between h-full min-h-[450px] sm:min-h-[550px] shadow-xl">
             <div>
               <div className="flex items-center justify-between pb-4 border-b dark:border-slate-800 light:border-slate-200">
                 <div className="flex items-center gap-2">
@@ -266,9 +298,9 @@ export const StaffPOSPage: React.FC = () => {
               </div>
 
               {/* Cart List */}
-              <div className="divide-y dark:divide-slate-800/80 light:divide-slate-100 max-h-[350px] overflow-y-auto my-4 pr-1">
+              <div className="divide-y dark:divide-slate-800/80 light:divide-slate-100 max-h-[320px] sm:max-h-[350px] overflow-y-auto my-4 pr-1">
                 {cart.length === 0 ? (
-                  <div className="text-center py-16 dark:text-slate-500 light:text-slate-400">
+                  <div className="text-center py-12 sm:py-16 dark:text-slate-500 light:text-slate-400">
                     <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Cart is empty.</p>
                     <p className="text-xs mt-1 opacity-75">Scan barcode or click items to add.</p>
@@ -319,7 +351,7 @@ export const StaffPOSPage: React.FC = () => {
               <div className="flex justify-between items-center text-sm dark:text-slate-300 light:text-slate-600">
                 <span>Total Items:</span>
                 <span className="font-semibold dark:text-slate-100 light:text-slate-900">
-                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                  {totalCartCount}
                 </span>
               </div>
 

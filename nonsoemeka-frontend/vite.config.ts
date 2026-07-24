@@ -13,9 +13,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // DEV-ONLY PROXY: forwards /api/* → Go API on localhost:8080 during `npm run dev`.
+    // In production the nginx container handles /api reverse-proxying at the same origin.
+    // For cross-domain deployments (e.g. Vercel + fly.io), set VITE_API_BASE_URL in the
+    // build environment instead of relying on this proxy.
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8080',
         changeOrigin: true,
       },
     },

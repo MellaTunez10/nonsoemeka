@@ -76,9 +76,10 @@ func (r *postgresAuditRepository) List(ctx context.Context, db DBTX, actorID *uu
 	}
 
 	query := fmt.Sprintf(`
-		SELECT a.id, a.actor_id, u.username as actor_name, a.action, a.target_table, a.target_id, a.metadata, a.created_at
+		SELECT a.id, COALESCE(a.actor_id, '00000000-0000-0000-0000-000000000000'::uuid) as actor_id,
+		       COALESCE(u.username, 'Deleted User') as actor_name, a.action, a.target_table, a.target_id, a.metadata, a.created_at
 		FROM audit_logs a
-		JOIN users u ON a.actor_id = u.id
+		LEFT JOIN users u ON a.actor_id = u.id
 		%s
 		ORDER BY a.created_at DESC
 		LIMIT $%d OFFSET $%d

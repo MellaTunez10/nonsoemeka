@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,8 +20,10 @@ import (
 	"nonsoemeka-backend/internal/dto"
 	"nonsoemeka-backend/internal/handlers"
 	"nonsoemeka-backend/internal/middleware"
+	"nonsoemeka-backend/internal/database"
 	"nonsoemeka-backend/internal/repository"
 	"nonsoemeka-backend/internal/services"
+	"github.com/google/uuid"
 )
 
 // connectTestDB opens a connection to the test database.
@@ -35,6 +37,23 @@ func connectTestDB(t *testing.T) *pgxpool.Pool {
 	pool, err := pgxpool.New(context.Background(), dsn)
 	require.NoError(t, err, "failed to open test DB connection")
 	t.Cleanup(func() { pool.Close() })
+
+	// Find the project root to locate the migrations directory
+	// Since tests run from the package directory (e.g. internal/handlers),
+	// we need to traverse up to the backend root.
+	migrationsDir := filepath.Join("..", "..", "migrations")
+	err = database.RunMigrations(context.Background(), pool, migrationsDir)
+	require.NoError(t, err, "failed to run database migrations on test DB")
+
+	// Seed the admin user expected by the tests
+	adminPassHash, _ := auth.HashPassword("AdminPass123!")
+	_, err = pool.Exec(context.Background(), `
+		INSERT INTO users (id, username, password_hash, role, email)
+		VALUES ($1, 'admin', $2, 'ADMIN', 'admin@pharmacy.com')
+		ON CONFLICT (username) DO NOTHING
+	`, uuid.New().String(), adminPassHash)
+	require.NoError(t, err, "failed to seed admin user")
+
 	return pool
 }
 

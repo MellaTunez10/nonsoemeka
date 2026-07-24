@@ -43,6 +43,14 @@ func NewPool(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, err
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string) error {
+	// Acquire an advisory lock so concurrent tests/startup don't race on CREATE TABLE
+	if _, err := pool.Exec(ctx, "SELECT pg_advisory_lock(847382)"); err != nil {
+		return fmt.Errorf("failed to acquire migration lock: %w", err)
+	}
+	defer func() {
+		_, _ = pool.Exec(ctx, "SELECT pg_advisory_unlock(847382)")
+	}()
+
 	_, err := pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version VARCHAR(255) PRIMARY KEY,

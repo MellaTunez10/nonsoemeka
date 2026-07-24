@@ -126,9 +126,9 @@ type CreateStaffRequest struct {
 }
 
 type UpdateStaffRequest struct {
-	IsActive      *bool   `json:"is_active,omitempty"`
-	Password      *string `json:"password,omitempty"`
-	ClearLockout  bool    `json:"clear_lockout,omitempty"`
+	IsActive     *bool   `json:"is_active,omitempty"`
+	Password     *string `json:"password,omitempty"`
+	ClearLockout bool    `json:"clear_lockout,omitempty"`
 }
 
 type StaffResponse struct {
@@ -160,12 +160,12 @@ type UpdateSettingsRequest struct {
 }
 
 type FinancialSummaryResponse struct {
-	TotalRevenue    string `json:"total_revenue"`
-	TotalCost       string `json:"total_cost"`
+	TotalRevenue     string `json:"total_revenue"`
+	TotalCost        string `json:"total_cost"`
 	TotalGrossProfit string `json:"total_gross_profit"`
-	ProfitMarginPct string `json:"profit_margin_percentage"`
-	TotalSalesCount int    `json:"total_sales_count"`
-	TotalItemsSold  int    `json:"total_items_sold"`
+	ProfitMarginPct  string `json:"profit_margin_percentage"`
+	TotalSalesCount  int    `json:"total_sales_count"`
+	TotalItemsSold   int    `json:"total_items_sold"`
 }
 
 type SalesTrendItem struct {
@@ -175,26 +175,26 @@ type SalesTrendItem struct {
 }
 
 type TopProductItem struct {
-	ProductID    uuid.UUID `json:"product_id"`
-	ProductName  string    `json:"product_name"`
-	SKU          string    `json:"sku"`
-	TotalQuantity int      `json:"total_quantity_sold"`
-	TotalRevenue string    `json:"total_revenue"`
+	ProductID     uuid.UUID `json:"product_id"`
+	ProductName   string    `json:"product_name"`
+	SKU           string    `json:"sku"`
+	TotalQuantity int       `json:"total_quantity_sold"`
+	TotalRevenue  string    `json:"total_revenue"`
 }
 
 type InventoryMovementResponse struct {
-	ID            uuid.UUID `json:"id"`
-	BatchID       uuid.UUID `json:"batch_id"`
-	BatchNumber   string    `json:"batch_number,omitempty"`
-	ProductID     uuid.UUID `json:"product_id,omitempty"`
-	ProductName   string    `json:"product_name,omitempty"`
-	MovementType  string    `json:"movement_type"`
-	QuantityDelta int       `json:"quantity_delta"`
+	ID            uuid.UUID  `json:"id"`
+	BatchID       uuid.UUID  `json:"batch_id"`
+	BatchNumber   string     `json:"batch_number,omitempty"`
+	ProductID     uuid.UUID  `json:"product_id,omitempty"`
+	ProductName   string     `json:"product_name,omitempty"`
+	MovementType  string     `json:"movement_type"`
+	QuantityDelta int        `json:"quantity_delta"`
 	ReferenceID   *uuid.UUID `json:"reference_id,omitempty"`
-	Reason        *string   `json:"reason,omitempty"`
-	CreatedBy     uuid.UUID `json:"created_by"`
-	CreatedByName string    `json:"created_by_name,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
+	Reason        *string    `json:"reason,omitempty"`
+	CreatedBy     uuid.UUID  `json:"created_by"`
+	CreatedByName string     `json:"created_by_name,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 type AuditLogResponse struct {

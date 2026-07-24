@@ -12,18 +12,18 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"nonsoemeka-backend/internal/auth"
 	"nonsoemeka-backend/internal/config"
+	"nonsoemeka-backend/internal/database"
 	"nonsoemeka-backend/internal/dto"
 	"nonsoemeka-backend/internal/handlers"
 	"nonsoemeka-backend/internal/middleware"
-	"nonsoemeka-backend/internal/database"
 	"nonsoemeka-backend/internal/repository"
 	"nonsoemeka-backend/internal/services"
-	"github.com/google/uuid"
 )
 
 // connectTestDB opens a connection to the test database.

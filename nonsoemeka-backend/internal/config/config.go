@@ -16,7 +16,13 @@ type Config struct {
 	JWT            JWTConfig
 	Logging        LoggingConfig
 	RateLimit      RateLimitConfig
+	Seed           SeedConfig
 	AllowedOrigins []string
+}
+
+type SeedConfig struct {
+	AdminPassword string
+	StaffPassword string
 }
 
 type ServerConfig struct {
@@ -85,6 +91,9 @@ func Load() (*Config, error) {
 	rateLogin := getEnvInt("RATE_LIMIT_LOGIN_PER_MINUTE", 5, &errs)
 	rateGlobal := getEnvInt("RATE_LIMIT_GLOBAL_PER_MINUTE", 300, &errs)
 
+	seedAdminPassword := getRequiredEnv("SEED_ADMIN_PASSWORD", &errs)
+	seedStaffPassword := getRequiredEnv("SEED_STAFF_PASSWORD", &errs)
+
 	allowedOriginsStr := getEnvString("ALLOWED_ORIGINS", "")
 	var allowedOrigins []string
 	for _, origin := range strings.Split(allowedOriginsStr, ",") {
@@ -131,6 +140,10 @@ func Load() (*Config, error) {
 		RateLimit: RateLimitConfig{
 			LoginPerMinute:  rateLogin,
 			GlobalPerMinute: rateGlobal,
+		},
+		Seed: SeedConfig{
+			AdminPassword: seedAdminPassword,
+			StaffPassword: seedStaffPassword,
 		},
 		AllowedOrigins: allowedOrigins,
 	}

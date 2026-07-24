@@ -18,9 +18,9 @@ const (
 type MovementType string
 
 const (
-	MovementReceived         MovementType = "RECEIVED"
-	MovementDispensed        MovementType = "DISPENSED"
-	MovementAdjustment       MovementType = "ADJUSTMENT"
+	MovementReceived        MovementType = "RECEIVED"
+	MovementDispensed       MovementType = "DISPENSED"
+	MovementAdjustment      MovementType = "ADJUSTMENT"
 	MovementExpiredWriteOff MovementType = "EXPIRED_WRITE_OFF"
 )
 

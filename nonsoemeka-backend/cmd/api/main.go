@@ -69,7 +69,7 @@ func main() {
 	auditRepo := repository.NewAuditRepository()
 
 	// Seed Data
-	if err := seedInitialData(ctx, pool, userRepo, productRepo, batchRepo, movementRepo, settingsRepo, auditRepo); err != nil {
+	if err := seedInitialData(ctx, cfg, pool, userRepo, productRepo, batchRepo, movementRepo, settingsRepo, auditRepo); err != nil {
 		slog.Warn("seed data check/execution error", "error", err)
 	}
 
@@ -229,6 +229,7 @@ func parseLogLevel(levelStr string) slog.Level {
 
 func seedInitialData(
 	ctx context.Context,
+	cfg *config.Config,
 	pool repository.DBTX,
 	userRepo repository.UserRepository,
 	productRepo repository.ProductRepository,
@@ -259,8 +260,8 @@ func seedInitialData(
 	_ = settingsRepo.Set(ctx, pool, "receipt_footer", receiptFooterBytes, nil)
 
 	// Seed Admin & Staff Users
-	adminPassHash, _ := auth.HashPassword("AdminPass123!")
-	staffPassHash, _ := auth.HashPassword("StaffPass123!")
+	adminPassHash, _ := auth.HashPassword(cfg.Seed.AdminPassword)
+	staffPassHash, _ := auth.HashPassword(cfg.Seed.StaffPassword)
 
 	adminUser, err := userRepo.Create(ctx, pool, models.User{
 		Username:     "admin",

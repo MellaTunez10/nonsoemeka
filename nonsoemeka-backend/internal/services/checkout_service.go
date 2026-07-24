@@ -21,13 +21,13 @@ type CheckoutService interface {
 }
 
 type checkoutService struct {
-	pool            *pgxpool.Pool
-	saleRepo        repository.SaleRepository
-	batchRepo       repository.BatchRepository
-	productRepo     repository.ProductRepository
-	movementRepo    repository.InventoryMovementRepository
-	settingsRepo    repository.SettingsRepository
-	userRepo        repository.UserRepository
+	pool         *pgxpool.Pool
+	saleRepo     repository.SaleRepository
+	batchRepo    repository.BatchRepository
+	productRepo  repository.ProductRepository
+	movementRepo repository.InventoryMovementRepository
+	settingsRepo repository.SettingsRepository
+	userRepo     repository.UserRepository
 }
 
 func NewCheckoutService(

@@ -85,13 +85,16 @@ func Load() (*Config, error) {
 	rateLogin := getEnvInt("RATE_LIMIT_LOGIN_PER_MINUTE", 5, &errs)
 	rateGlobal := getEnvInt("RATE_LIMIT_GLOBAL_PER_MINUTE", 300, &errs)
 
-	allowedOriginsStr := getEnvString("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
+	allowedOriginsStr := getEnvString("ALLOWED_ORIGINS", "")
 	var allowedOrigins []string
 	for _, origin := range strings.Split(allowedOriginsStr, ",") {
 		trimmed := strings.TrimSpace(origin)
 		if trimmed != "" {
 			allowedOrigins = append(allowedOrigins, trimmed)
 		}
+	}
+	if len(allowedOrigins) == 0 {
+		errs = append(errs, "ALLOWED_ORIGINS is required (comma-separated list of allowed origins, e.g. https://pos.nonsoemeka.com)")
 	}
 
 	if len(errs) > 0 {

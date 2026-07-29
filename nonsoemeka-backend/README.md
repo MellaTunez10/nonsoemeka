@@ -42,9 +42,7 @@ cp .env.example .env
 go run ./cmd/api/main.go
 ```
 
-The server automatically runs database migrations from `migrations/` and seeds initial default users:
-- **Admin User**: `username: admin` | `password: AdminPass123!`
-- **Staff User**: `username: staff` | `password: StaffPass123!`
+The server automatically runs database migrations from `migrations/` and seeds initial users based on the `SEED_ADMIN_PASSWORD` and `SEED_STAFF_PASSWORD` variables defined in your `.env` file. (Hardcoded default passwords have been removed for security).
 
 ### 3. Frontend Client
 Start the Vite React frontend:

@@ -26,26 +26,20 @@ nonsoemeka/
 
 ## 🚀 Getting Started
 
-### 1. Database
+### 1. Configuration
+Copy the `.env.example` file to `.env` in the root directory and fill in the required secure passwords for the initial admin and staff accounts:
 ```bash
-cd nonsoemeka-backend
-docker compose up -d db
-```
-
-### 2. Run Backend API
-```bash
-cd nonsoemeka-backend
 cp .env.example .env
-go run ./cmd/api/main.go
+# Edit .env and set SEED_ADMIN_PASSWORD and SEED_STAFF_PASSWORD
 ```
 
-### 3. Run Frontend
+### 2. Run Application (Docker Compose)
+The entire stack (Frontend, Backend API, PostgreSQL) can be started using the root Docker Compose file:
 ```bash
-cd nonsoemeka-frontend
-npm install
-npm run dev
+docker compose up -d --build
 ```
 
-Open `http://localhost:5173`. Default credentials:
-- **Admin User**: `username: admin` | `password: AdminPass123!`
-- **Staff User**: `username: staff` | `password: StaffPass123!`
+### 3. Access the Application
+Open `http://localhost` (or `http://localhost:5173` if running the frontend separately via `npm run dev`).
+
+> **Note on Credentials:** The default hardcoded passwords have been removed for security. Use the `SEED_ADMIN_PASSWORD` and `SEED_STAFF_PASSWORD` you defined in your `.env` file to log in as `admin` or `staff`.

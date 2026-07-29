@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { Navbar } from './components/layout/Navbar';
+import { AdminLayout } from './components/layout/AdminLayout';
 import { LoginPage } from './pages/LoginPage';
 import { StaffPOSPage } from './pages/StaffPOSPage';
 import { AdminInventoryPage } from './pages/AdminInventoryPage';
@@ -41,6 +42,10 @@ const ProtectedLayout: React.FC<{ requiredRole?: 'ADMIN' | 'STAFF' }> = ({ requi
     return <Navigate to="/pos" replace />;
   }
 
+  if (hasRole('ADMIN')) {
+    return <AdminLayout />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
       <Navbar />
@@ -65,8 +70,8 @@ export const App: React.FC = () => {
                 <Route path="/pos" element={<StaffPOSPage />} />
               </Route>
 
-              {/* Admin Only Protected Routes */}
-              <Route element={<ProtectedLayout requiredRole="ADMIN" />}>
+              {/* Admin Routes — uses sidebar layout */}
+              <Route element={<AdminLayout />}>
                 <Route path="/admin/inventory" element={<AdminInventoryPage />} />
                 <Route path="/admin/expiry" element={<AdminExpiryPage />} />
                 <Route path="/admin/financials" element={<AdminFinancialsPage />} />

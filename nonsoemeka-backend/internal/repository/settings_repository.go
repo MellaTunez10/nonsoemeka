@@ -16,6 +16,7 @@ type SettingsRepository interface {
 	Get(ctx context.Context, db DBTX, key string) (models.Setting, error)
 	Set(ctx context.Context, db DBTX, key string, value json.RawMessage, updatedBy *uuid.UUID) error
 	GetAll(ctx context.Context, db DBTX) ([]models.Setting, error)
+	Upsert(ctx context.Context, db DBTX, s models.Setting) error
 }
 
 type postgresSettingsRepository struct{}
@@ -47,6 +48,20 @@ func (r *postgresSettingsRepository) Set(ctx context.Context, db DBTX, key strin
 	_, err := db.Exec(ctx, query, key, value, updatedBy)
 	if err != nil {
 		return fmt.Errorf("failed to set setting %s: %w", key, err)
+	}
+	return nil
+}
+
+func (r *postgresSettingsRepository) Upsert(ctx context.Context, db DBTX, s models.Setting) error {
+	query := `
+		INSERT INTO settings (key, value, updated_by, updated_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (key) DO UPDATE
+		SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at
+	`
+	_, err := db.Exec(ctx, query, s.Key, s.Value, s.UpdatedBy, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("failed to upsert setting %s: %w", s.Key, err)
 	}
 	return nil
 }

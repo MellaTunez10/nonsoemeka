@@ -33,6 +33,10 @@ type UserRepository interface {
 	RevokeRefreshToken(ctx context.Context, db DBTX, tokenID uuid.UUID) error
 	RevokeAllUserRefreshTokens(ctx context.Context, db DBTX, userID uuid.UUID) error
 	Delete(ctx context.Context, db DBTX, id uuid.UUID) error
+	UpsertFromCloud(ctx context.Context, db DBTX, u models.User) error
+	ApplyMostRestrictiveSecurityState(ctx context.Context, db DBTX, userID uuid.UUID, isActive bool, lockedUntil *time.Time) error
+	ListUpdatedSince(ctx context.Context, db DBTX, since time.Time) ([]models.User, time.Time, error)
+	CreateIfNotExists(ctx context.Context, db DBTX, id uuid.UUID, username, email, passwordHash string, role models.UserRole) (bool, error)
 }
 
 type postgresUserRepository struct{}
@@ -252,4 +256,96 @@ func (r *postgresUserRepository) Delete(ctx context.Context, db DBTX, id uuid.UU
 		return apperrors.ErrNotFound
 	}
 	return nil
+}
+
+func (r *postgresUserRepository) UpsertFromCloud(ctx context.Context, db DBTX, u models.User) error {
+	query := `
+		INSERT INTO users (id, username, email, password_hash, role, is_active, failed_login_attempts, locked_until, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (id) DO UPDATE SET
+		  username = EXCLUDED.username,
+		  email = EXCLUDED.email,
+		  password_hash = EXCLUDED.password_hash,
+		  role = EXCLUDED.role,
+		  failed_login_attempts = EXCLUDED.failed_login_attempts,
+		  updated_at = EXCLUDED.updated_at
+	`
+	_, err := db.Exec(ctx, query, u.ID, u.Username, u.Email, u.PasswordHash, u.Role, u.IsActive, u.FailedLoginAttempts, u.LockedUntil, u.CreatedAt, u.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("failed to upsert user from cloud: %w", err)
+	}
+	return nil
+}
+
+func (r *postgresUserRepository) ApplyMostRestrictiveSecurityState(ctx context.Context, db DBTX, userID uuid.UUID, isActive bool, lockedUntil *time.Time) error {
+	query := `
+		UPDATE users
+		SET is_active = (is_active AND $2),
+		    locked_until = GREATEST(locked_until, $3)
+		WHERE id = $1
+	`
+	tag, err := db.Exec(ctx, query, userID, isActive, lockedUntil)
+	if err != nil {
+		return fmt.Errorf("failed to apply most restrictive security state: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+func (r *postgresUserRepository) ListUpdatedSince(ctx context.Context, db DBTX, since time.Time) ([]models.User, time.Time, error) {
+	query := `
+		SELECT id, username, email, password_hash, role, is_active, failed_login_attempts, locked_until, created_at, updated_at,
+		       NOW() AS server_now
+		FROM users
+		WHERE updated_at > $1
+		ORDER BY updated_at ASC
+	`
+	rows, err := db.Query(ctx, query, since)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("failed to query users updated since: %w", err)
+	}
+	defer rows.Close()
+
+	var users []models.User
+	var serverNow time.Time
+
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(
+			&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role,
+			&u.IsActive, &u.FailedLoginAttempts, &u.LockedUntil, &u.CreatedAt, &u.UpdatedAt,
+			&serverNow,
+		); err != nil {
+			return nil, time.Time{}, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+
+	if len(users) == 0 {
+		if err := db.QueryRow(ctx, "SELECT NOW()").Scan(&serverNow); err != nil {
+			return nil, time.Time{}, fmt.Errorf("failed to get server time: %w", err)
+		}
+	}
+
+	return users, serverNow, nil
+}
+
+func (r *postgresUserRepository) CreateIfNotExists(ctx context.Context, db DBTX, id uuid.UUID, username, email, passwordHash string, role models.UserRole) (bool, error) {
+	query := `
+		INSERT INTO users (id, username, email, password_hash, role)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (id) DO NOTHING
+		RETURNING id
+	`
+	var returnedID uuid.UUID
+	err := db.QueryRow(ctx, query, id, username, email, passwordHash, role).Scan(&returnedID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to create user if not exists: %w", err)
+	}
+	return true, nil
 }

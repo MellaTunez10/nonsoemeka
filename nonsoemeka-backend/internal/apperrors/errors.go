@@ -18,6 +18,7 @@ var (
 	ErrProductInactive         = errors.New("product inactive")
 	ErrNotFound                = errors.New("resource not found")
 	ErrBadRequest              = errors.New("bad request")
+	ErrSyncConflict            = errors.New("sync conflict: would violate stock bounds or uniqueness on receiving node")
 )
 
 type ErrorResponse struct {
@@ -58,6 +59,8 @@ func ToHTTPStatus(err error) (int, string) {
 		return http.StatusNotFound, "NOT_FOUND"
 	case errors.Is(err, ErrBadRequest):
 		return http.StatusBadRequest, "BAD_REQUEST"
+	case errors.Is(err, ErrSyncConflict):
+		return http.StatusConflict, "SYNC_CONFLICT"
 	default:
 		return http.StatusInternalServerError, "INTERNAL_ERROR"
 	}

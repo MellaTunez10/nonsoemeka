@@ -21,6 +21,7 @@ type SaleRepository interface {
 	GetFinancialSummary(ctx context.Context, db DBTX, startDate, endDate string) (totalRevenue, totalCost decimal.Decimal, salesCount, itemsCount int, err error)
 	GetSalesTrends(ctx context.Context, db DBTX, startDate, endDate string, page, pageSize int) ([]dto.SalesTrendItem, int, error)
 	GetTopProducts(ctx context.Context, db DBTX, startDate, endDate string, page, pageSize int) ([]dto.TopProductItem, int, error)
+	CreateIdempotent(ctx context.Context, db DBTX, sale models.Sale, items []models.SaleItem) (bool, error)
 }
 
 type postgresSaleRepository struct{}
@@ -68,6 +69,36 @@ func (r *postgresSaleRepository) Create(ctx context.Context, db DBTX, sale model
 
 	createdSale.Items = createdItems
 	return createdSale, nil
+}
+
+func (r *postgresSaleRepository) CreateIdempotent(ctx context.Context, db DBTX, sale models.Sale, items []models.SaleItem) (bool, error) {
+	saleQuery := `
+		INSERT INTO sales (id, staff_id, total_amount, idempotency_key, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (id) DO NOTHING
+		RETURNING id
+	`
+	var saleID uuid.UUID
+	err := db.QueryRow(ctx, saleQuery, sale.ID, sale.StaffID, sale.TotalAmount, sale.IdempotencyKey, sale.CreatedAt).Scan(&saleID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to idempotently insert sale: %w", err)
+	}
+
+	itemQuery := `
+		INSERT INTO sale_items (id, sale_id, product_id, batch_id, quantity, unit_price)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	for _, item := range items {
+		_, err := db.Exec(ctx, itemQuery, item.ID, saleID, item.ProductID, item.BatchID, item.Quantity, item.UnitPrice)
+		if err != nil {
+			return false, fmt.Errorf("failed to insert sale item idempotently: %w", err)
+		}
+	}
+
+	return true, nil
 }
 
 func (r *postgresSaleRepository) FindByIdempotencyKey(ctx context.Context, db DBTX, key string) (*models.Sale, error) {

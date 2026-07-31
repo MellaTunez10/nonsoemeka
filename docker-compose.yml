@@ -75,6 +75,13 @@ services:
       # REQUIRED: Set to your production domain (e.g. https://pos.nonsoemeka.com).
       # For local dev, set ALLOWED_ORIGINS=http://localhost in your .env file.
       ALLOWED_ORIGINS:                ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
+      # --- Sync ---
+      # "LOCAL" = pharmacy on-site (pushes data to cloud, pulls users)
+      # "CLOUD" = backup/admin node (receives pushes, serves user pulls)
+      SERVER_MODE:                    ${SERVER_MODE:-LOCAL}
+      SYNC_NODE_KEY:                  ${SYNC_NODE_KEY:?SYNC_NODE_KEY is required}
+      SYNC_CLOUD_URL:                ${SYNC_CLOUD_URL:-}
+      SYNC_INTERVAL:                 ${SYNC_INTERVAL:-30s}
     depends_on:
       db:
         condition: service_healthy

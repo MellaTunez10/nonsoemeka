@@ -19,6 +19,8 @@ type BatchRepository interface {
 	LockAvailableBatches(ctx context.Context, db DBTX, productID uuid.UUID) ([]models.Batch, error)
 	List(ctx context.Context, db DBTX, productID *uuid.UUID, page, pageSize int) ([]models.Batch, int, error)
 	ListExpiring(ctx context.Context, db DBTX, daysThreshold int, page, pageSize int) ([]models.Batch, int, error)
+	CreateIdempotent(ctx context.Context, db DBTX, b models.Batch) (bool, error)
+	LockByID(ctx context.Context, db DBTX, id uuid.UUID) (models.Batch, error)
 }
 
 type postgresBatchRepository struct{}
@@ -50,6 +52,50 @@ func (r *postgresBatchRepository) Create(ctx context.Context, db DBTX, b models.
 	}
 
 	return created, nil
+}
+
+func (r *postgresBatchRepository) CreateIdempotent(ctx context.Context, db DBTX, b models.Batch) (bool, error) {
+	query := `
+		INSERT INTO batches (id, product_id, batch_number, quantity_received, quantity_remaining, expiry_date, cost_price, markup_percentage, received_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (id) DO NOTHING
+		RETURNING id
+	`
+	var id uuid.UUID
+	err := db.QueryRow(ctx, query,
+		b.ID, b.ProductID, b.BatchNumber, b.QuantityReceived, b.QuantityRemaining, b.ExpiryDate, b.CostPrice, b.MarkupPercentage, b.ReceivedAt,
+	).Scan(&id)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to idempotently create batch: %w", err)
+	}
+
+	return true, nil
+}
+
+func (r *postgresBatchRepository) LockByID(ctx context.Context, db DBTX, id uuid.UUID) (models.Batch, error) {
+	query := `
+		SELECT id, product_id, batch_number, quantity_received, quantity_remaining, expiry_date, cost_price, markup_percentage, selling_price, received_at
+		FROM batches
+		WHERE id = $1
+		FOR UPDATE
+	`
+	var lockedBatch models.Batch
+	err := db.QueryRow(ctx, query, id).Scan(
+		&lockedBatch.ID, &lockedBatch.ProductID, &lockedBatch.BatchNumber, &lockedBatch.QuantityReceived, &lockedBatch.QuantityRemaining,
+		&lockedBatch.ExpiryDate, &lockedBatch.CostPrice, &lockedBatch.MarkupPercentage, &lockedBatch.SellingPrice, &lockedBatch.ReceivedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Batch{}, apperrors.ErrNotFound
+		}
+		return models.Batch{}, fmt.Errorf("failed to lock batch by id: %w", err)
+	}
+
+	return lockedBatch, nil
 }
 
 func (r *postgresBatchRepository) Update(ctx context.Context, db DBTX, b models.Batch) error {

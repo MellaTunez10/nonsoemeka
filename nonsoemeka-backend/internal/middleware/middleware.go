@@ -385,3 +385,18 @@ func InternalOnlyMiddleware(next http.Handler) http.Handler {
 		writeError(w, r, http.StatusForbidden, "FORBIDDEN", "access denied")
 	})
 }
+
+// SyncAuthMiddleware validates the X-Sync-Node-Key header against the configured
+// node key. Used for sync endpoints instead of JWT auth.
+func SyncAuthMiddleware(expectedNodeKey string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			nodeKey := r.Header.Get("X-Sync-Node-Key")
+			if nodeKey == "" || nodeKey != expectedNodeKey {
+				writeError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "invalid or missing sync node key")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

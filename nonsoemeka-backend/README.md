@@ -42,9 +42,19 @@ cp .env.example .env
 go run ./cmd/api/main.go
 ```
 
-The server automatically runs database migrations from `migrations/` and seeds initial users based on the `SEED_ADMIN_PASSWORD` and `SEED_STAFF_PASSWORD` variables defined in your `.env` file. (Hardcoded default passwords have been removed for security).
+The server automatically runs database migrations from `migrations/` on startup.
 
-### 3. Frontend Client
+### 3. Seed Database
+Run the seed script to populate initial users, products, batches, movements, and settings:
+```bash
+go run ./cmd/seed/main.go
+```
+This script creates users based on the `SEED_ADMIN_PASSWORD` and `SEED_STAFF_PASSWORD` variables defined in your `.env` file. (Hardcoded default passwords have been removed for security).
+
+> [!CAUTION]
+> **Production Seeding Warning:** The seed script is designed for local development and testing. Do NOT run this script in production. For your production environment, the initial seed admin account will be provisioned by the hybrid sync bootstrapper. If you do seed manually, **you must rotate the seed admin credentials immediately after launch**.
+
+### 4. Frontend Client
 Start the Vite React frontend:
 ```bash
 cd nonsoemeka-frontend
@@ -53,6 +63,28 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` in your browser.
+
+---
+
+## 🔑 Obtaining a Token per Role
+
+To manually call API endpoints outside the frontend, you'll need an access token. Use `curl` or Postman to log in:
+
+**For Admin:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin", "password":"<YOUR_SEED_ADMIN_PASSWORD>"}'
+```
+
+**For Staff:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"staff", "password":"<YOUR_SEED_STAFF_PASSWORD>"}'
+```
+
+Extract the `access_token` from the JSON response and pass it in the `Authorization: Bearer <token>` header for subsequent requests.
 
 ---
 
@@ -84,6 +116,8 @@ docker compose -f docker-compose.test.yml down -v
 - **Access Token**: Delivered in JSON response body (`access_token`). Kept strictly in frontend memory (`lib/auth.tsx`), never written to `localStorage`.
 - **Refresh Token**: Delivered exclusively via `Set-Cookie` as an `httpOnly`, `Secure`, `SameSite=Strict` cookie (`refresh_token`). JavaScript cannot access it, preventing persistent account takeovers via XSS.
 - All frontend API calls use `credentials: 'include'` to pass/receive authentication cookies automatically.
+
+> **⚠️ Production Secrets Note**: Do NOT use `.env` files in production environments. Production secrets (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `DB_PASSWORD`, `SYNC_NODE_KEY`) **must** be securely injected by the deployment platform's Secret Manager (e.g., AWS Secrets Manager, Google Secret Manager, Kubernetes Secrets) as environment variables.
 
 ---
 

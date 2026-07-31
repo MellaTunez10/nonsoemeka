@@ -19,6 +19,7 @@ type ProductRepository interface {
 	FindBySKU(ctx context.Context, db DBTX, sku string) (models.Product, error)
 	List(ctx context.Context, db DBTX, search string, activeOnly bool, page, pageSize int) ([]models.Product, int, error)
 	SoftDelete(ctx context.Context, db DBTX, id uuid.UUID) error
+	CreateIdempotent(ctx context.Context, db DBTX, p models.Product) (bool, error)
 }
 
 type postgresProductRepository struct{}
@@ -47,6 +48,24 @@ func (r *postgresProductRepository) Create(ctx context.Context, db DBTX, p model
 	}
 
 	return created, nil
+}
+
+func (r *postgresProductRepository) CreateIdempotent(ctx context.Context, db DBTX, p models.Product) (bool, error) {
+	query := `
+		INSERT INTO products (id, name, sku, description, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (id) DO NOTHING
+		RETURNING id
+	`
+	var id uuid.UUID
+	err := db.QueryRow(ctx, query, p.ID, p.Name, p.SKU, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to idempotently create product: %w", err)
+	}
+	return true, nil
 }
 
 func (r *postgresProductRepository) FindByID(ctx context.Context, db DBTX, id uuid.UUID) (models.Product, error) {

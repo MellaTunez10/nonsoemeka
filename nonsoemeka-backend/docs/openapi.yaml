@@ -253,8 +253,142 @@ paths:
               schema:
                 $ref: '#/components/schemas/FinancialSummaryResponse'
 
+
+  /api/v1/admin/staff:
+    get:
+      summary: List staff users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of staff members
+    post:
+      summary: Create a new staff user
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Staff created
+  /api/v1/admin/staff/{id}:
+    patch:
+      summary: Update staff user
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+  /api/v1/admin/staff/{id}/deactivate:
+    post:
+      summary: Deactivate a staff user
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deactivated
+
+  /api/v1/admin/reports/stock:
+    get:
+      summary: Generate stock report
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Stock report generated
+
+  /api/v1/admin/reports/expiring:
+    get:
+      summary: Generate expiring batches report
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: integer
+            default: 90
+      responses:
+        '200':
+          description: Expiring batches report generated
+
+  /api/v1/admin/settings:
+    get:
+      summary: List all settings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current settings
+    patch:
+      summary: Update a setting
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Setting updated
+
+  /api/v1/admin/audit-logs:
+    get:
+      summary: List audit logs
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Paginated audit logs
+
+  /api/v1/admin/sync/failed:
+    get:
+      summary: List failed sync movements
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Failed sync movements
+
+  /api/v1/sync/push:
+    post:
+      summary: Push data from Local to Cloud
+      security:
+        - NodeKeyAuth: []
+      responses:
+        '200':
+          description: Push successful
+
+  /api/v1/sync/pull-users:
+    post:
+      summary: Pull users from Cloud to Local
+      security:
+        - NodeKeyAuth: []
+      responses:
+        '200':
+          description: Pull successful
+
+  /api/v1/sync/register-seed-admin:
+    post:
+      summary: Register seed admin
+      security:
+        - NodeKeyAuth: []
+      responses:
+        '200':
+          description: Admin registered
+
 components:
   securitySchemes:
+    NodeKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Sync-Node-Key
     BearerAuth:
       type: http
       scheme: bearer

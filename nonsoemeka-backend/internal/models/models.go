@@ -24,6 +24,14 @@ const (
 	MovementExpiredWriteOff MovementType = "EXPIRED_WRITE_OFF"
 )
 
+type SyncStatus string
+
+const (
+	SyncStatusPending SyncStatus = "PENDING"
+	SyncStatusSynced  SyncStatus = "SYNCED"
+	SyncStatusFailed  SyncStatus = "FAILED"
+)
+
 type User struct {
 	ID                  uuid.UUID  `json:"id"`
 	Username            string     `json:"username"`
@@ -35,6 +43,8 @@ type User struct {
 	LockedUntil         *time.Time `json:"locked_until,omitempty"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
+	SyncStatus          SyncStatus `json:"-"`
+	SyncedAt            *time.Time `json:"-"`
 }
 
 type RefreshToken struct {
@@ -56,6 +66,8 @@ type Product struct {
 	UpdatedAt     time.Time        `json:"updated_at"`
 	TotalQuantity int              `json:"total_quantity,omitempty"`
 	SellingPrice  *decimal.Decimal `json:"selling_price,omitempty"`
+	SyncStatus    SyncStatus       `json:"-"`
+	SyncedAt      *time.Time       `json:"-"`
 }
 
 type Batch struct {
@@ -71,21 +83,26 @@ type Batch struct {
 	MarkupPercentage  decimal.Decimal `json:"markup_percentage"`
 	SellingPrice      decimal.Decimal `json:"selling_price"`
 	ReceivedAt        time.Time       `json:"received_at"`
+	SyncStatus        SyncStatus      `json:"-"`
+	SyncedAt          *time.Time      `json:"-"`
 }
 
 type InventoryMovement struct {
-	ID            uuid.UUID    `json:"id"`
-	BatchID       uuid.UUID    `json:"batch_id"`
-	BatchNumber   string       `json:"batch_number,omitempty"`
-	ProductID     uuid.UUID    `json:"product_id,omitempty"`
-	ProductName   string       `json:"product_name,omitempty"`
-	MovementType  MovementType `json:"movement_type"`
-	QuantityDelta int          `json:"quantity_delta"`
-	ReferenceID   *uuid.UUID   `json:"reference_id,omitempty"`
-	Reason        *string      `json:"reason,omitempty"`
-	CreatedBy     uuid.UUID    `json:"created_by"`
-	CreatedByName string       `json:"created_by_name,omitempty"`
-	CreatedAt     time.Time    `json:"created_at"`
+	ID                uuid.UUID    `json:"id"`
+	BatchID           uuid.UUID    `json:"batch_id"`
+	BatchNumber       string       `json:"batch_number,omitempty"`
+	ProductID         uuid.UUID    `json:"product_id,omitempty"`
+	ProductName       string       `json:"product_name,omitempty"`
+	MovementType      MovementType `json:"movement_type"`
+	QuantityDelta     int          `json:"quantity_delta"`
+	ReferenceID       *uuid.UUID   `json:"reference_id,omitempty"`
+	Reason            *string      `json:"reason,omitempty"`
+	CreatedBy         uuid.UUID    `json:"created_by"`
+	CreatedByName     string       `json:"created_by_name,omitempty"`
+	CreatedAt         time.Time    `json:"created_at"`
+	SyncStatus        SyncStatus   `json:"-"`
+	SyncedAt          *time.Time   `json:"-"`
+	SyncFailureReason *string      `json:"-"`
 }
 
 type Sale struct {
@@ -96,6 +113,8 @@ type Sale struct {
 	IdempotencyKey string          `json:"idempotency_key"`
 	CreatedAt      time.Time       `json:"created_at"`
 	Items          []SaleItem      `json:"items,omitempty"`
+	SyncStatus     SyncStatus      `json:"-"`
+	SyncedAt       *time.Time      `json:"-"`
 }
 
 type SaleItem struct {
@@ -111,10 +130,12 @@ type SaleItem struct {
 }
 
 type Setting struct {
-	Key       string          `json:"key"`
-	Value     json.RawMessage `json:"value"`
-	UpdatedBy *uuid.UUID      `json:"updated_by,omitempty"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	Key        string          `json:"key"`
+	Value      json.RawMessage `json:"value"`
+	UpdatedBy  *uuid.UUID      `json:"updated_by,omitempty"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	SyncStatus SyncStatus      `json:"-"`
+	SyncedAt   *time.Time      `json:"-"`
 }
 
 type AuditLog struct {
@@ -126,4 +147,6 @@ type AuditLog struct {
 	TargetID    *uuid.UUID      `json:"target_id,omitempty"`
 	Metadata    json.RawMessage `json:"metadata,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
+	SyncStatus  SyncStatus      `json:"-"`
+	SyncedAt    *time.Time      `json:"-"`
 }

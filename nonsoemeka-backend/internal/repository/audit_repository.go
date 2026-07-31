@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 type AuditRepository interface {
 	Create(ctx context.Context, tx pgx.Tx, log models.AuditLog) error
 	List(ctx context.Context, db DBTX, actorID *uuid.UUID, action, targetTable *string, startDate, endDate *string, page, pageSize int) ([]models.AuditLog, int, error)
+	CreateIdempotent(ctx context.Context, db DBTX, a models.AuditLog) (bool, error)
 }
 
 type postgresAuditRepository struct{}
@@ -35,6 +37,24 @@ func (r *postgresAuditRepository) Create(ctx context.Context, tx pgx.Tx, log mod
 		return fmt.Errorf("failed to insert audit log: %w", err)
 	}
 	return nil
+}
+
+func (r *postgresAuditRepository) CreateIdempotent(ctx context.Context, db DBTX, a models.AuditLog) (bool, error) {
+	query := `
+		INSERT INTO audit_logs (id, actor_id, action, target_table, target_id, metadata, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (id) DO NOTHING
+		RETURNING id
+	`
+	var id uuid.UUID
+	err := db.QueryRow(ctx, query, a.ID, a.ActorID, a.Action, a.TargetTable, a.TargetID, a.Metadata, a.CreatedAt).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to idempotently create audit log: %w", err)
+	}
+	return true, nil
 }
 
 func (r *postgresAuditRepository) List(ctx context.Context, db DBTX, actorID *uuid.UUID, action, targetTable *string, startDate, endDate *string, page, pageSize int) ([]models.AuditLog, int, error) {

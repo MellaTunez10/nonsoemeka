@@ -15,6 +15,7 @@ import (
 	"nonsoemeka-backend/internal/models"
 	"nonsoemeka-backend/internal/repository"
 	"nonsoemeka-backend/internal/services"
+	syncsvc "nonsoemeka-backend/internal/sync"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shopspring/decimal"
 )
@@ -53,6 +55,22 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	// Register DB metrics
+	prometheus.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "db_pool_open_connections",
+			Help: "Number of open connections in the database pool",
+		},
+		func() float64 { return float64(pool.Stat().TotalConns()) },
+	))
+	prometheus.MustRegister(prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "db_pool_idle_connections",
+			Help: "Number of idle connections in the database pool",
+		},
+		func() float64 { return float64(pool.Stat().IdleConns()) },
+	))
 
 	if err := database.RunMigrations(ctx, pool, "migrations"); err != nil {
 		slog.Error("database migration failed", "error", err)
@@ -91,11 +109,79 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	staffHandler := handlers.NewStaffManagementHandler(staffService)
 
+	// Sync
+	syncTrackingRepo := syncsvc.NewSyncTrackingRepository()
+	syncService := syncsvc.NewSyncService(pool, productRepo, batchRepo, settingsRepo, saleRepo, movementRepo, auditRepo, userRepo)
+	syncHandler := syncsvc.NewSyncHandler(pool, syncService, syncTrackingRepo)
+
 	// Rate limiters
+	r := setupRouter(cfg, pool, authHandler, inventoryHandler, checkoutHandler, financialsHandler, reportsHandler, staffHandler, settingsHandler, syncHandler)
+
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler:      r,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+	}
+
+	serverCtx, serverStopCtx := context.WithCancel(context.Background())
+
+	// Run initial auto write-off check
+	runAutoWriteOff(serverCtx, pool, batchRepo, movementRepo, auditRepo)
+
+	// Start background expiration watcher
+	startExpirationWatcher(serverCtx, pool, batchRepo, movementRepo, auditRepo)
+
+	// Start sync worker in LOCAL mode
+	if cfg.Sync.ServerMode == "LOCAL" {
+		syncWorker := syncsvc.NewSyncWorker(
+			pool, syncTrackingRepo, syncService,
+			settingsRepo, userRepo,
+			cfg.Sync.CloudURL, cfg.Sync.NodeKey, cfg.Sync.Interval,
+		)
+		go syncWorker.Start(serverCtx)
+	}
+	slog.Info("server mode", "mode", cfg.Sync.ServerMode)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sig
+		slog.Info("shutting down server gracefully...")
+
+		shutdownCtx, cancelShutdown := context.WithTimeout(serverCtx, cfg.Server.ShutdownTimeout)
+		defer cancelShutdown()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown forced", "error", err)
+		}
+		serverStopCtx()
+	}()
+
+	slog.Info("server listening", "address", srv.Addr)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Error("server failed to start", "error", err)
+	}
+	<-serverCtx.Done()
+	slog.Info("server exited cleanly")
+}
+
+func setupRouter(
+	cfg *config.Config,
+	pool *pgxpool.Pool,
+	authHandler *handlers.AuthHandler,
+	inventoryHandler *handlers.InventoryHandler,
+	checkoutHandler *handlers.CheckoutHandler,
+	financialsHandler *handlers.FinancialsHandler,
+	reportsHandler *handlers.ReportsHandler,
+	staffHandler *handlers.StaffManagementHandler,
+	settingsHandler *handlers.SettingsHandler,
+	syncHandler *syncsvc.SyncHandler,
+) *chi.Mux {
 	globalLimiter := middleware.NewRateLimiter(cfg.RateLimit.GlobalPerMinute, time.Minute)
 	loginLimiter := middleware.NewRateLimiter(cfg.RateLimit.LoginPerMinute, time.Minute)
 
-	// Router wiring
 	r := chi.NewRouter()
 
 	r.Use(middleware.RecoveryMiddleware)
@@ -170,48 +256,21 @@ func main() {
 			// Settings
 			r.Get("/api/v1/admin/settings", settingsHandler.GetSettings)
 			r.Put("/api/v1/admin/settings", settingsHandler.UpdateSettings)
+
+			// Sync Status (admin-visible, JWT-protected)
+			r.Get("/api/v1/admin/sync/failed", syncHandler.HandleListFailedSyncItems)
 		})
 	})
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      r,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-	}
+	// --- Sync endpoints (Node-key auth, not JWT) ---
+	r.Route("/api/v1/sync", func(r chi.Router) {
+		r.Use(middleware.SyncAuthMiddleware(cfg.Sync.NodeKey))
+		r.Post("/push", syncHandler.HandlePush)
+		r.Get("/pull-users", syncHandler.HandlePullUsers)
+		r.Post("/register-seed-admin", syncHandler.HandleRegisterSeedAdmin)
+	})
 
-	serverCtx, serverStopCtx := context.WithCancel(context.Background())
-
-	// Run initial auto write-off check
-	runAutoWriteOff(serverCtx, pool, batchRepo, movementRepo, auditRepo)
-
-	// Start background expiration watcher
-	startExpirationWatcher(serverCtx, pool, batchRepo, movementRepo, auditRepo)
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sig
-		slog.Info("shutting down server gracefully...")
-
-		shutdownCtx, cancelShutdown := context.WithTimeout(serverCtx, cfg.Server.ShutdownTimeout)
-		defer cancelShutdown()
-
-		if err := srv.Shutdown(shutdownCtx); err != nil {
-			slog.Error("server shutdown forced", "error", err)
-		}
-		serverStopCtx()
-	}()
-
-	slog.Info("server listening", "address", srv.Addr)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("server failed to start", "error", err)
-		os.Exit(1)
-	}
-
-	<-serverCtx.Done()
-	slog.Info("server exited cleanly")
+	return r
 }
 
 func parseLogLevel(levelStr string) slog.Level {

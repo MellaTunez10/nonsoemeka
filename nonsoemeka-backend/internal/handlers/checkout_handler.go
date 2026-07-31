@@ -10,6 +10,10 @@ import (
 	"nonsoemeka-backend/internal/middleware"
 	"nonsoemeka-backend/internal/services"
 	"nonsoemeka-backend/internal/validation"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type CheckoutHandler struct {
@@ -22,7 +26,17 @@ func NewCheckoutHandler(checkoutService services.CheckoutService) *CheckoutHandl
 	}
 }
 
+var checkoutDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "checkout_duration_seconds",
+	Help:    "Latency of checkout processing",
+	Buckets: prometheus.DefBuckets,
+})
+
 func (h *CheckoutHandler) ProcessCheckout(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		checkoutDuration.Observe(time.Since(start).Seconds())
+	}()
 	claims, ok := middleware.GetUserClaims(r.Context())
 	if !ok {
 		h.writeError(w, r, apperrors.ErrUnauthorized)

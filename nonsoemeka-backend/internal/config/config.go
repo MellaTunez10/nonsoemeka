@@ -17,6 +17,7 @@ type Config struct {
 	Logging        LoggingConfig
 	RateLimit      RateLimitConfig
 	Seed           SeedConfig
+	Sync           SyncConfig
 	AllowedOrigins []string
 }
 
@@ -58,6 +59,13 @@ type LoggingConfig struct {
 type RateLimitConfig struct {
 	LoginPerMinute  int
 	GlobalPerMinute int
+}
+
+type SyncConfig struct {
+	ServerMode string        // "LOCAL" | "CLOUD"
+	NodeKey    string        // per-node credential for sync auth
+	CloudURL   string        // LOCAL mode only: the cloud endpoint to push to / pull from
+	Interval   time.Duration // push/pull ticker interval (default 30s)
 }
 
 func Load() (*Config, error) {
@@ -106,6 +114,18 @@ func Load() (*Config, error) {
 		errs = append(errs, "ALLOWED_ORIGINS is required (comma-separated list of allowed origins, e.g. https://pos.nonsoemeka.com)")
 	}
 
+	// Sync configuration
+	serverMode := getEnvString("SERVER_MODE", "LOCAL")
+	if serverMode != "LOCAL" && serverMode != "CLOUD" {
+		errs = append(errs, "SERVER_MODE must be either LOCAL or CLOUD")
+	}
+	syncNodeKey := getRequiredEnv("SYNC_NODE_KEY", &errs)
+	syncCloudURL := getEnvString("SYNC_CLOUD_URL", "")
+	if serverMode == "LOCAL" && syncCloudURL == "" {
+		errs = append(errs, "SYNC_CLOUD_URL is required when SERVER_MODE is LOCAL")
+	}
+	syncInterval := getEnvDuration("SYNC_INTERVAL", 30*time.Second, &errs)
+
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("configuration errors:\n  - %s", strings.Join(errs, "\n  - "))
 	}
@@ -144,6 +164,12 @@ func Load() (*Config, error) {
 		Seed: SeedConfig{
 			AdminPassword: seedAdminPassword,
 			StaffPassword: seedStaffPassword,
+		},
+		Sync: SyncConfig{
+			ServerMode: serverMode,
+			NodeKey:    syncNodeKey,
+			CloudURL:   syncCloudURL,
+			Interval:   syncInterval,
 		},
 		AllowedOrigins: allowedOrigins,
 	}

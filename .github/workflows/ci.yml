@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Production CI Pipeline
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: "1.22"
           check-latest: true
           cache-dependency-path: nonsoemeka-backend/go.sum
 
@@ -39,8 +39,9 @@ jobs:
       - name: Run Go Vet
         run: go vet ./...
 
+      # Pin govulncheck to a specific version for build reproducibility
       - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
 
       - name: Run Vulnerability Check
         run: govulncheck ./...
@@ -62,6 +63,7 @@ jobs:
           DB_NAME: nonsoemeka_test_db
           JWT_ACCESS_SECRET: test-access-secret-min-32-chars-key
           JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars-key
+          SYNC_NODE_KEY: test-sync-node-key-at-least-32-chars-long
           ALLOWED_ORIGINS: http://localhost
         run: go test -race -v ./...
 
@@ -89,8 +91,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
           cache-dependency-path: nonsoemeka-frontend/package-lock.json
 
       - name: Install Dependencies
@@ -113,7 +115,7 @@ jobs:
           retention-days: 3
 
   # ===========================================================================
-  # Docker Build Smoke Test — verify the full compose builds cleanly
+  # Docker Build Smoke Test — verify config validity AND full container build
   # Runs only after both CI jobs pass to avoid wasting runner minutes
   # ===========================================================================
   docker-build:
@@ -125,13 +127,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Build all services
-        run: docker compose build
+      - name: Validate Docker Compose Config
+        run: docker compose config -q
         env:
-          # Dummy secrets — sufficient to pass Go's config validation during build
           DB_PASSWORD: ci-db-password
           JWT_ACCESS_SECRET: ci-access-secret-at-least-32-chars-long
           JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-chars-long
+          SYNC_NODE_KEY: ci-sync-node-key-at-least-32-chars-long
+          SEED_ADMIN_PASSWORD: ci-admin-password
+          SEED_STAFF_PASSWORD: ci-staff-password
+          ALLOWED_ORIGINS: http://localhost
+
+      - name: Build all services
+        run: docker compose build
+        env:
+          # Dummy secrets — sufficient to pass Go's config validation during image compilation
+          DB_PASSWORD: ci-db-password
+          JWT_ACCESS_SECRET: ci-access-secret-at-least-32-chars-long
+          JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-chars-long
+          SYNC_NODE_KEY: ci-sync-node-key-at-least-32-chars-long
           SEED_ADMIN_PASSWORD: ci-admin-password
           SEED_STAFF_PASSWORD: ci-staff-password
           ALLOWED_ORIGINS: http://localhost
